@@ -1,0 +1,58 @@
+repos:
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 25.1.0 # Use the latest Black version
+    hooks:
+      - id: black
+        args: ["--diff", "--line-length", "120"] # --check to Enforce check-only mode (no auto-formatting)
+        types: [python] # Target Python files
+        exclude: .*_pb2.*\.py
+
+  - repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.5.5
+    hooks:
+      - id: insert-license
+        files: \.py$
+        args:
+          # - "--remove-header" # Remove existing license headers. Useful when updating license.
+          - "--license-filepath"
+          - ".github/LICENSE_HEADER.txt"
+          - "--use-current-year"
+        exclude: |
+          (?x)^(
+              server/source/genie.sim.lab/genie/sim/lab/app/app_launcher.py|
+              server/source/genie.sim.lab/genie/sim/lab/app/ui_builder.py|
+              server/source/genie.sim.lab/genie/sim/lab/controllers/parallel_gripper.py|
+              robot/isaac_sim/aimdk/
+          )$
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0 # Use the ref you want to point at
+    hooks:
+      - id: trailing-whitespace
+      - id: check-added-large-files
+      - id: check-ast
+      - id: check-json
+      - id: check-xml
+      - id: check-yaml
+      - id: requirements-txt-fixer
+      - id: sort-simple-yaml
+      - id: pretty-format-json
+        args: [--autofix]
+      - id: mixed-line-ending
+      - id: detect-private-key
+      - id: debug-statements
+      - id: check-merge-conflict
+      - id: check-docstring-first
+
+  # https://blogs.halodoc.io/code-version-best-practices-with-clean-commit-formats/
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.2.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+        args:
+          [
+            --allowed-prefixes,
+            "add,dev,chore,ci,perf,update,fix,feat,docs,refactor,revert,test,format",
+            --min-length=10,
+          ]
