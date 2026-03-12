@@ -51,8 +51,13 @@ class BaseEnv(AderEnv):
                 self.init_hand,
                 self.init_gripper,
             ) = self.robot_task_info.init_pose()
+            if self.init_head is None:
+                self.init_head = []
+            if self.init_waist is None:
+                self.init_waist = []
             gen_config = self.task_info.get("generalization_config", {})
-            rand_init_arm = gen_config.get("rand_init_arm", [0] * 14)
+            rand_init_arm = gen_config.get("rand_init_arm", [0] * len(self.init_arm))
+            rand_init_arm = rand_init_arm[:len(self.init_arm)]  # Truncate to match arm joint count
             self.init_arm = list(np.array(self.init_arm) + np.array(rand_init_arm))
 
         self.ikfk_solver = IKFKSolver(

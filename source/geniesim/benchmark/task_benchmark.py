@@ -362,8 +362,18 @@ class TaskBenchmark(object):
                 "/record/right_camera_rgb",
                 "/record/static_info",
             ]
+        elif "aloha" in self.task_config["robot"]["robot_cfg"].lower():
+            self.record_topic_list = [
+                "/tf",
+                "/joint_states",
+                "/record/top_camera_rgb",
+                "/record/left_wrist_camera_rgb",
+                "/record/right_wrist_camera_rgb",
+                "/record/static_info",
+            ]
         else:
             raise ValueError("Invalid robot cfg")
+
 
     def evaluate_episode(self, robot_cfg, single_te: TaskEvaluation):
         # Create agent to be evaluated

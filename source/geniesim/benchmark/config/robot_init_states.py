@@ -2,6 +2,55 @@
 # Author: Genie Sim Team
 # License: Mozilla Public License Version 2.0
 
+ALOHA_DEFAULT_STATES = {
+    "init_arm": [
+        # left arm: waist, shoulder, elbow, forearm_roll, wrist_angle, wrist_rotate
+        0.0,
+        -0.96,
+        1.16,
+        0.0,
+        -0.3,
+        0.0,
+        # right arm: waist, shoulder, elbow, forearm_roll, wrist_angle, wrist_rotate
+        0.0,
+        -0.96,
+        1.16,
+        0.0,
+        -0.3,
+        0.0,
+    ],
+    "init_hand": [
+        # left gripper control joint (1 DOF, mimic)
+        0.024, -0.024,
+        # right gripper control joint (1 DOF, mimic)
+        0.024, -0.024
+    ],
+}
+
+FFW_SG2_DEFAULT_STATES = {
+    "init_arm": [
+        # left_arm
+        -1.16, 
+        1.27, 
+        -1.38, 
+        -2.39, 
+        1.32, 
+        0.612, 
+        0,
+        # right arm
+        -1.16, 
+        -1.27, 
+        1.38, 
+        -2.39, 
+        -1.32, 
+        0.612, 
+        -0,
+        ],
+    "init_hand": [1, 1],
+    "head_state": [0.7, 0.0],
+    "body_state": [-0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+}
+
 G1_DEFAULT_STATES = {
     "body_state": [0.0, 0.4363, 0.8727, 0.4],
     "init_arm": [
@@ -63,6 +112,29 @@ G2_STATES_1 = {
         -0.27811,
         -0.925845,
         0.839257,
+    ],
+    "init_hand": [0.0, 0.0],
+}
+
+# Arms extended forward toward the table, ready to grasp
+G2_BIMANUAL_NEAR_BALL = {
+    "body_state": [0.0, 0.0, -0.18151424220741028, 1.2172, -0.83423],
+    "head_state": [0.0, 0.0, 0.11464],
+    "init_arm": [
+        0.3,          # left joint1 - shoulder more forward
+        -0.3,         # left joint2 - less tucked
+        -1.0,         # left joint3 - less bent
+        -1.2,         # left joint4 - elbow extended
+        0.2,          # left joint5
+        -0.5,         # left joint6 - wrist
+        -0.4,         # left joint7 - wrist
+        -0.3,         # right joint1 - shoulder more forward
+        -0.3,         # right joint2 - less tucked
+        1.0,          # right joint3 - less bent
+        -1.2,         # right joint4 - elbow extended
+        -0.2,         # right joint5
+        -0.5,         # right joint6 - wrist
+        0.4,          # right joint7 - wrist
     ],
     "init_hand": [0.0, 0.0],
 }
@@ -181,102 +253,152 @@ TASK_INFO_DICT = {
     "pick_billards_color": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "pick_block_color": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "pick_block_shape": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "pick_block_size": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "pick_block_number": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "pick_cup_size": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "pick_fruit_size": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "pick_object_type": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "pick_pen_color": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "pick_specific_object": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "pick_accessory": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "pick_object_position": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "pick_stationery": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "pick_follow_logic_and": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "pick_follow_logic_not": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "pick_follow_logic_or": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "place_block_into_box": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "stable_grasp": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "place_object_into_box_position": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "place_object_into_box_color": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "place_object_into_box_size": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "put_pen_into_penholder": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "sort_accessory": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "straighten_object": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "sort_fruit": {
         "G1_omnipicker": G1_DEFAULT_STATES,
         "G2_omnipicker": G2_DEFAULT_STATES,
+        "aloha": ALOHA_DEFAULT_STATES,
+        "ffw_sg2_follower": FFW_SG2_DEFAULT_STATES,
     },
     "place_book": {"G2_omnipicker": G2_STATES_1},
     "place_book_hard": {"G2_omnipicker": G2_STATES_1},
@@ -309,3 +431,4 @@ TASK_INFO_DICT = {
         "G2_omnipicker": G2_STATES_1,
     },
 }
+

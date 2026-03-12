@@ -10,8 +10,31 @@ import time
 
 def relabel_gripper_state(obs, limit):
     state_dict = obs["states"]
-    state_dict[14] = min(max(1 - state_dict[14] / limit, 0), 1) * 100 + 20
-    state_dict[15] = min(max(1 - state_dict[15] / limit, 0), 1) * 100 + 20
+    # The last 2 elements of the state vector are the gripper states (G1/G2: 14, 15 | Aloha: 12, 13)
+    if "G2" in obs.get("robot_cfg", ""):
+        # For G2 with waist, gripper might be earlier, but assume last two for now or offset from end
+        pass # Actually states length is dynamic. We should use the last two elements before waist if present or just -1/-2.
+    
+    # Safely index the last two elements of the arm before waist if applicable. 
+    # But usually gripper states are always added last, or right after arm.
+    # In pi_env.py, G2 waist joints are appended *after* gripper joints.
+    
+    # A safer approach: just use negative indexing based on how many gripper states there are? 
+    # Actually wait, in pi_env.py:
+    # 1. G1/G2: Arm (14) + Gripper (2) + Waist (0 or 5)
+    # 2. Aloha (OpenPI format): Left Arm (6) + Left Gripper (1) + Right Arm (6) + Right Gripper (1) -> Total 14
+
+    if "aloha" in obs.get("robot_cfg", "aloha") or len(state_dict) == 14:
+        # OpenPI 14-D format interleaves them
+        g_idx1 = 6
+        g_idx2 = 13
+    else:
+        # Default G1/G2 format where grippers are after arm 14
+        g_idx1 = 14
+        g_idx2 = 15
+    
+    state_dict[g_idx1] = min(max(1 - state_dict[g_idx1] / limit, 0), 1) * 100 + 20
+    state_dict[g_idx2] = min(max(1 - state_dict[g_idx2] / limit, 0), 1) * 100 + 20
 
 
 def relabel_gripper_action(action, limit):
@@ -40,14 +63,15 @@ def process_action(ikfk_solver, arm_joint_state, action: np.ndarray, type, smoot
 
 
 def filter_abs_joint(arm_joint_state, action, alpha):
-    return action
-    return list((1 - alpha) * np.array(arm_joint_state) + alpha * np.array(action[0:14])) + list(action[14:])
-    return list(arm_joint_state) + list(action[14:])
-    ret = []
-    mft = MovingAVGFilter(list(arm_joint_state), action[:14])
-    mft.move(lambda target_joints: ret.append(target_joints))
-    ret[0].extend(action[14:])
-    return ret[0]
+    """
+    Smooths the absolute joint action using an EMA (Exponential Moving Average) filter.
+    This prevents jerky movements by moving only a fraction `alpha` of the way
+    from the current state towards the target action in each step.
+    """
+    state_len = len(arm_joint_state)
+    action_np = np.asarray(action)
+    smoothed_part = (1 - alpha) * np.asarray(arm_joint_state) + alpha * action_np[:state_len]
+    return np.concatenate([smoothed_part, action_np[state_len:]]).tolist()
 
 
 class MovingAVGFilter:

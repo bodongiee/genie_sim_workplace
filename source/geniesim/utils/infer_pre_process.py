@@ -19,6 +19,15 @@ class TaskInfo:
         elif "G2_omnipicker" == robot_cfg:
             self._head_init_position = self._task_config["head_state"]
             self._waist_init_position = self._task_config["body_state"]
+
+        elif "aloha" == robot_cfg:
+            # Aloha has no body/head state - fixed table-mounted robot
+            self._head_init_position = []
+            self._waist_init_position = []
+        elif "ffw_sg2_follower" == robot_cfg:
+            self._head_init_position = self._task_config["head_state"]
+            self._waist_init_position = self._task_config["body_state"]
+
         else:
             raise ValueError(f"Invalid robot cfg {robot_cfg}")
 

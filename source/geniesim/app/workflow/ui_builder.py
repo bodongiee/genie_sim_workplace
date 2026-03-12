@@ -175,6 +175,7 @@ class UIBuilder:
         actions = ArticulationAction(joint_positions=target_positions, joint_indices=target_joint_indices)
         if not is_trajectory:
             self.articulation.set_joint_positions(target_positions, joint_indices=target_joint_indices)
+            self.articulation.apply_action(actions)
         else:
             self.reached = True
             self.articulation.apply_action(actions)

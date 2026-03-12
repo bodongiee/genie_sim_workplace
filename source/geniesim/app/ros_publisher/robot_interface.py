@@ -149,8 +149,12 @@ class RobotInterface(Node):
         self._js_msg.effort = [0.0] * N
 
         self._metadata = articulation._articulation_view._metadata
-        self.joint_names_ee = ["idx51_ee_l_joint", "idx91_ee_r_joint"]
-        self.joint_indices_ee = 1 + np.array([self._metadata.joint_indices[jn] for jn in self.joint_names_ee])
+        all_ee_names = ["idx51_ee_l_joint", "idx91_ee_r_joint"]
+        self.joint_names_ee = [jn for jn in all_ee_names if jn in self._metadata.joint_indices]
+        if self.joint_names_ee:
+            self.joint_indices_ee = 1 + np.array([self._metadata.joint_indices[jn] for jn in self.joint_names_ee])
+        else:
+            self.joint_indices_ee = np.array([], dtype=np.int64)
 
     def register_articulated_obj(self, articulated_objs):
         for prim_path, articulation in articulated_objs.items():
@@ -173,7 +177,12 @@ class RobotInterface(Node):
         self._static_tf_tree = []
         self._dynamic_tf_tree = []
         self.articulat_objects = {}
-        self.build_tf_tree(stage, stage.GetPrimAtPath(f"/{robot_ns}/base_link"), None, None)
+        base_prim = stage.GetPrimAtPath(f"/{robot_ns}/base_link")
+        if not base_prim or not base_prim.IsValid():
+            # For robots without base_link (e.g. ALOHA), skip TF tree building
+            logger.warning(f"No base_link found at /{robot_ns}/base_link, skipping TF tree")
+        else:
+            self.build_tf_tree(stage, base_prim, None, None)
 
         def _build_tf_list(tf_tree):
             tfs = []
@@ -452,7 +461,7 @@ class RobotInterface(Node):
         pub.publish(msg)
 
     def pub_joint_state_ee(self, articulation):
-        if articulation is None:
+        if articulation is None or len(self.joint_names_ee) == 0:
             return
 
         eef_6d_forces = articulation.get_measured_joint_forces(self.joint_indices_ee)
@@ -540,6 +549,12 @@ class RobotInterface(Node):
                 ret[k] = self.annotators[k].get_data()[..., :3]  # Remove Alpha channel, (H, W, 3)
         else:
             for k, v in dir.items():
+                if v not in self.annotators:
+                    logger.warning(
+                        f"Camera '{v}' not found in registered annotators. "
+                        f"Available: {list(self.annotators.keys())}. Skipping."
+                    )
+                    continue
                 ret[k] = self.annotators[v].get_data()[..., :3]  # Remove Alpha channel, (H, W, 3)
 
         return ret

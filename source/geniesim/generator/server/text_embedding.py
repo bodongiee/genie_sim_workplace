@@ -27,7 +27,7 @@ class TextEmbeddings(BaseModel, Embeddings):
 
     @model_validator(mode="after")
     def validate_environment(self) -> Self:
-        if self.dimension not in [512, 1024, 2048, 4096]:
+        if self.dimension not in [512, 768, 1024, 2048, 4096]:
             raise ValueError(f"Invalid dimension: {self.dimension}. Must be one of [512, 1024, 2048, 4096]")
 
         self.client = OpenAI(
@@ -80,7 +80,7 @@ class DashscopeTextEmbeddings(BaseModel, Embeddings):
 
     @model_validator(mode="after")
     def validate_environment(self) -> Self:
-        if self.dimension not in [512, 1024, 2048]:
+        if self.dimension not in [512, 768, 1024, 2048]:
             raise ValueError(f"Invalid dimension: {self.dimension}. Must be one of [512, 1024, 2048]")
         if self.api_key == "":
             raise ValueError("API key not set")

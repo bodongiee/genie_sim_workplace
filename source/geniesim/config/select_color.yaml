@@ -16,7 +16,7 @@
   benchmark:
     client_host: "localhost:50051"
     num_episode: 1
-    task_name: "table_task_g1"
+    task_name: "table_task_aloha"
     sub_task_name: "pick_block_color"
     output_dir: "output"
     fps: 30

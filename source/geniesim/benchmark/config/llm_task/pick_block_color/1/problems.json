@@ -9,7 +9,7 @@
                 "Follow": "benchmark_building_blocks_0542a922|[0.2,0.2,0.2]|left_gripper"
               },
               {
-                "StepOut": 200
+                "StepOut": 400
               }
             ]
           },
@@ -19,7 +19,7 @@
                 "PickUpOnGripper": "benchmark_building_blocks_0542a922|left_gripper"
               },
               {
-                "StepOut": 200
+                "StepOut": 400
               }
             ]
           }
@@ -40,7 +40,7 @@
                 "Follow": "benchmark_building_blocks_d6cfb753|[0.2,0.2,0.2]|left_gripper"
               },
               {
-                "StepOut": 200
+                "StepOut": 400
               }
             ]
           },
@@ -50,7 +50,7 @@
                 "PickUpOnGripper": "benchmark_building_blocks_d6cfb753|left_gripper"
               },
               {
-                "StepOut": 200
+                "StepOut": 400
               }
             ]
           }
@@ -71,7 +71,7 @@
                 "Follow": "benchmark_building_blocks_72a2ca17|[0.2,0.2,0.2]|right_gripper"
               },
               {
-                "StepOut": 200
+                "StepOut": 400
               }
             ]
           },
@@ -81,7 +81,7 @@
                 "PickUpOnGripper": "benchmark_building_blocks_72a2ca17|right_gripper"
               },
               {
-                "StepOut": 200
+                "StepOut": 400
               }
             ]
           }
@@ -102,7 +102,7 @@
                 "Follow": "benchmark_building_blocks_e38c0e52|[0.2,0.2,0.2]|right_gripper"
               },
               {
-                "StepOut": 200
+                "StepOut": 400
               }
             ]
           },
@@ -112,7 +112,7 @@
                 "PickUpOnGripper": "benchmark_building_blocks_e38c0e52|right_gripper"
               },
               {
-                "StepOut": 200
+                "StepOut": 400
               }
             ]
           }
@@ -133,7 +133,7 @@
                 "Follow": "benchmark_building_blocks_719a5469|[0.2,0.2,0.2]|left_gripper"
               },
               {
-                "StepOut": 200
+                "StepOut": 400
               }
             ]
           },
@@ -143,7 +143,7 @@
                 "PickUpOnGripper": "benchmark_building_blocks_719a5469|left_gripper"
               },
               {
-                "StepOut": 200
+                "StepOut": 400
               }
             ]
           }

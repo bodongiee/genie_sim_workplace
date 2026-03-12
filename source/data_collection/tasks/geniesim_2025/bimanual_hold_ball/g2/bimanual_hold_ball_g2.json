@@ -1,0 +1,287 @@
+{
+    "objects": {
+        "constraints": null,
+        "fix_objects": [],
+        "attach_objects": [],
+        "scene_objects": [],
+        "task_related_objects": [
+            {
+                "candidate_objects": [
+                    {
+                        "data_info_dir": "objects/benchmark/ball/benchmark_ball_010/",
+                        "object_id": "benchmark_ball_010"
+                    },
+                    {
+                        "data_info_dir": "objects/benchmark/ball/benchmark_ball_011/",
+                        "object_id": "benchmark_ball_011"
+                    },
+                    {
+                        "data_info_dir": "objects/benchmark/ball/benchmark_ball_012/",
+                        "object_id": "benchmark_ball_012"
+                    },
+                    {
+                        "data_info_dir": "objects/benchmark/ball/benchmark_ball_013/",
+                        "object_id": "benchmark_ball_013"
+                    },
+                    {
+                        "data_info_dir": "objects/benchmark/ball/benchmark_ball_014/",
+                        "object_id": "benchmark_ball_014"
+                    },
+                    {
+                        "data_info_dir": "objects/benchmark/ball/benchmark_ball_015/",
+                        "object_id": "benchmark_ball_015"
+                    },
+                    {
+                        "data_info_dir": "objects/benchmark/ball/benchmark_ball_016/",
+                        "object_id": "benchmark_ball_016"
+                    },
+                    {
+                        "data_info_dir": "objects/benchmark/ball/benchmark_ball_017/",
+                        "object_id": "benchmark_ball_017"
+                    },
+                    {
+                        "data_info_dir": "objects/benchmark/ball/benchmark_ball_018/",
+                        "object_id": "benchmark_ball_018"
+                    },
+                    {
+                        "data_info_dir": "objects/benchmark/ball/benchmark_ball_019/",
+                        "object_id": "benchmark_ball_019"
+                    },
+                    {
+                        "data_info_dir": "objects/benchmark/ball/benchmark_ball_020/",
+                        "object_id": "benchmark_ball_020"
+                    }
+                ],
+                "mass": 0.1,
+                "object_id": "geniesim_2025_target_ball",
+                "workspace_id": "work_table",
+                "english_semantic_name": ["ball"]
+            }
+        ]
+    },
+    "recording_setting": {
+        "camera_list": [
+            "/G2/head_link3/head_front_Camera",
+            "/G2/gripper_r_base_link/Right_Camera",
+            "/G2/gripper_l_base_link/Left_Camera",
+            "/G2/head_link3/head_right_Camera",
+            "/G2/head_link3/head_left_Camera"
+        ],
+        "fps": 30,
+        "num_of_episode": 8,
+        "noised_probability": 0.1
+    },
+    "robot": {
+        "arm": "dual",
+        "init_arm_pose_noise": {
+            ".*_arm_.*": {
+                "noise_type": "uniform",
+                "low": -0.05,
+                "high": 0.05
+            }
+        },
+        "init_arm_pose": {
+            "idx21_arm_l_joint1": 0.739033,
+            "idx61_arm_r_joint1": -0.739033,
+            "idx05_body_joint5": 0.0,
+            "idx11_head_joint1": 0.0,
+            "idx22_arm_l_joint2": -0.717023,
+            "idx62_arm_r_joint2": -0.717023,
+            "idx04_body_joint4": 0.0,
+            "idx12_head_joint2": 0.0,
+            "idx23_arm_l_joint3": -1.524419,
+            "idx63_arm_r_joint3": 1.524419,
+            "idx03_body_joint3": 0.10025,
+            "idx13_head_joint3": 0.11464,
+            "idx24_arm_l_joint4": -1.537612,
+            "idx64_arm_r_joint4": -1.537612,
+            "idx02_body_joint2": 1.2172,
+            "idx25_arm_l_joint5": 0.27811,
+            "idx65_arm_r_joint5": -0.27811,
+            "idx01_body_joint1": -0.83423,
+            "idx26_arm_l_joint6": -0.925845,
+            "idx66_arm_r_joint6": -0.925845,
+            "idx27_arm_l_joint7": -0.839257,
+            "idx67_arm_r_joint7": 0.839257,
+            "idx111_chassis_lwheel_front_joint1": null,
+            "idx121_chassis_lwheel_rear_joint1": null,
+            "idx131_chassis_rwheel_front_joint1": null,
+            "idx141_chassis_rwheel_rear_joint1": null,
+            "idx112_chassis_lwheel_front_joint2": null,
+            "idx122_chassis_lwheel_rear_joint2": null,
+            "idx132_chassis_rwheel_front_joint2": null,
+            "idx142_chassis_rwheel_rear_joint2": null,
+            "idx31_gripper_l_inner_joint1": null,
+            "idx41_gripper_l_outer_joint1": 0.85,
+            "idx71_gripper_r_inner_joint1": null,
+            "idx81_gripper_r_outer_joint1": 0.85,
+            "idx32_gripper_l_inner_joint3": null,
+            "idx42_gripper_l_outer_joint3": null,
+            "idx72_gripper_r_inner_joint3": null,
+            "idx82_gripper_r_outer_joint3": null,
+            "idx33_gripper_l_inner_joint4": null,
+            "idx43_gripper_l_outer_joint4": null,
+            "idx73_gripper_r_inner_joint4": null,
+            "idx83_gripper_r_outer_joint4": null,
+            "idx39_gripper_l_inner_joint0": null,
+            "idx49_gripper_l_outer_joint0": null,
+            "idx79_gripper_r_inner_joint0": null,
+            "idx89_gripper_r_outer_joint0": null
+        },
+        "robot_cfg": "G2_omnipicker_fixed_dual.json",
+        "robot_id": "G2",
+        "robot_init_pose": {
+            "position": [
+                -0.17,
+                0.08,
+                0.0
+            ],
+            "quaternion": [
+                1,
+                0,
+                0,
+                0
+            ],
+            "random": {
+                "delta_position": [
+                    0.04,
+                    0.04,
+                    0
+                ]
+            }
+        }
+    },
+    "scene": {
+        "function_space_objects": {
+            "work_table": {
+                "material_obj_prim": {},
+                "position": [
+                    0.0,
+                    0.0,
+                    0.80621
+                ],
+                "quaternion": [
+                    1,
+                    0,
+                    0,
+                    0
+                ],
+                "size": [
+                    0.4,
+                    0.6,
+                    0.2
+                ]
+            }
+        },
+        "scene_id": "background/study_room/study_4/",
+        "scene_info_dir": "background/study_room/study_4/",
+        "scene_usd": [
+            "background/study_room/study_4/background.usda"
+        ]
+    },
+    "stages": [
+        {
+            "action": "pick",
+            "action_description": {
+                "action_text": "双臂抓住桌面上的球",
+                "english_action_text": "Both arms grasp the ball on the table"
+            },
+            "active": {
+                "object_id": "gripper",
+                "primitive": null
+            },
+            "checker": [
+                {
+                    "checker_name": "distance_to_target",
+                    "params": {
+                        "object_id": "geniesim_2025_target_ball",
+                        "rule": "lessThan",
+                        "target_id": "gripper",
+                        "value": 0.1
+                    }
+                }
+            ],
+            "extra_params": {
+                "arm": "dual",
+                "pick_up_direction": "x",
+                "pick_up_distance": 0.12,
+                "disable_upside_down": true,
+                "grasp_offset": 0.01
+            },
+            "passive": {
+                "object_id": "geniesim_2025_target_ball",
+                "primitive": null
+            }
+        },
+        {
+            "action": "reset",
+            "action_description": {
+                "action_text": "双臂复位",
+                "english_action_text": "Both arms reset"
+            },
+            "active": {
+                "object_id": "gripper",
+                "primitive": null
+            },
+            "extra_params": {
+                "arm": "dual"
+            },
+            "passive": {
+                "object_id": "gripper",
+                "primitive": null
+            }
+        }
+    ],
+    "task": "bimanual_hold_ball_g2",
+    "task_description": {
+        "english_task_name": "Both arms hold the ball and lift it up",
+        "init_scene_text": "机器人在书桌前，桌面上放着一个球",
+        "task_name": "双臂抓住球并举起"
+    },
+    "task_metric": {
+        "filter_rules": [
+            {
+                "params": {
+                    "camera": "head",
+                    "downsample_ratio": 0.2,
+                    "gripper": "right",
+                    "out_view_allow_time": 0.2
+                },
+                "result_code": 4,
+                "rule_name": "is_gripper_in_view"
+            },
+            {
+                "params": {
+                    "camera": "head",
+                    "downsample_ratio": 0.2,
+                    "gripper": "left",
+                    "out_view_allow_time": 0.2
+                },
+                "result_code": 4,
+                "rule_name": "is_gripper_in_view"
+            },
+            {
+                "params": {
+                    "objects": [
+                        "geniesim_2025_target_ball"
+                    ]
+                },
+                "result_code": 1,
+                "rule_name": "is_object_end_higher_than_start"
+            }
+        ]
+    },
+    "origin": {
+        "position": [
+            -4.03,
+            -0.032,
+            0.0
+        ],
+        "quaternion": [
+            1,
+            0,
+            0,
+            0
+        ]
+    }
+}
