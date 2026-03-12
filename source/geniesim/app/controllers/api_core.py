@@ -717,11 +717,20 @@ class APICore:
         self.scene.CreateGravityDirectionAttr().Set(Gf.Vec3f(0.0, 0.0, -1.0))
         self.scene.CreateGravityMagnitudeAttr().Set(9.81)
         physics_scene = PhysxSchema.PhysxSceneAPI.Get(self._stage, "/physicsScene")
-        physics_scene.CreateGpuMaxRigidContactCountAttr(8388608)
-        physics_scene.CreateGpuMaxRigidPatchCountAttr(163840)
-        physics_scene.CreateGpuFoundLostPairsCapacityAttr(2097152)
-        physics_scene.CreateGpuFoundLostAggregatePairsCapacityAttr(33554432)
-        physics_scene.CreateGpuTotalAggregatePairsCapacityAttr(2097152)
+        physics_scene.CreateGpuMaxRigidContactCountAttr(8388608 * 2)
+        physics_scene.CreateGpuMaxRigidPatchCountAttr(163840 * 2)
+        physics_scene.CreateGpuFoundLostPairsCapacityAttr(2097152 * 4)
+        physics_scene.CreateGpuFoundLostAggregatePairsCapacityAttr(33554432 * 2)
+        physics_scene.CreateGpuTotalAggregatePairsCapacityAttr(2097152 * 4)
+        physics_scene.CreateGpuCollisionStackSizeAttr(67108864 * 2)
+
+        # Disable self-collision on aloha finger links to prevent BroadPhase error
+        if "aloha" in self.robot_cfg.robot_name.lower():
+            self._disable_aloha_finger_collision()
+
+        # Set joint drive stiffness for ffw_sg2_follower (URDF only has damping, no stiffness)
+        #if "ffw_sg2_follower" in self.robot_cfg.robot_name.lower():
+        #    self._configure_ffw_sg2_joint_drives()
 
         with rep.get.prims(path_pattern=self.robot_cfg.robot_prim_path, prim_types=["Xform"]):
             rep.modify.semantics([("class", "robot")])
@@ -731,11 +740,123 @@ class APICore:
         viewport.set_active_camera("/G1/head_link2/Head_Camera")
         if "G2" in self.robot_name:
             viewport.set_active_camera("/genie/head_link3/head_front_Camera")
+        #====================================================
+        # Aloha
+        #====================================================            
+        elif "aloha" in self.robot_name:
+            viewport.set_active_camera("/World/aloha_bimanual_geniesim/top_camera")
+        #====================================================
+        # FFW
+        #====================================================  
+        elif "ffw_sg2_follower" in self.robot_name:
+            viewport.set_active_camera("/ffw_sg2_follower/head_link2/zed/Head_Camera")
+
+
         time.sleep(1)
         self._play()
         time.sleep(1)
         self._initialize_all_scene_articulations()
+    
+    def _disable_aloha_finger_collision(self):
+        """Disable collision on aloha finger links only to prevent BroadPhase errors."""
+        stage = self._stage
+        if not stage:
+            return
 
+        robot_prim_path = self.robot_cfg.robot_prim_path
+
+        # Ensure enabledSelfCollisions is disabled on the articulation root
+        robot_prim = stage.GetPrimAtPath(robot_prim_path)
+        if robot_prim.IsValid():
+            attr = robot_prim.GetAttribute("physxArticulation:enabledSelfCollisions")
+            if attr:
+                attr.Set(False)
+
+        # Only disable collision on finger link prims
+        finger_paths = [
+            f"{robot_prim_path}/vx300s_left/vx300s_left_left_finger_link",
+            f"{robot_prim_path}/vx300s_left/vx300s_left_right_finger_link",
+            f"{robot_prim_path}/vx300s_right/vx300s_right_left_finger_link",
+            f"{robot_prim_path}/vx300s_right/vx300s_right_right_finger_link",
+        ]
+
+        total_removed = 0
+        for finger_path in finger_paths:
+            root = stage.GetPrimAtPath(finger_path)
+            if not root.IsValid():
+                logger.warning(f"Finger prim not found: {finger_path}")
+                continue
+            stack = [root]
+            while stack:
+                prim = stack.pop()
+                if prim.HasAPI(UsdPhysics.CollisionAPI):
+                    prim.RemoveAPI(UsdPhysics.CollisionAPI)
+                    total_removed += 1
+                if prim.HasAPI(UsdPhysics.MeshCollisionAPI):
+                    prim.RemoveAPI(UsdPhysics.MeshCollisionAPI)
+                for child in prim.GetChildren():
+                    stack.append(child)
+
+        logger.info(f"Removed CollisionAPI from {total_removed} finger prims")
+    """
+    def _configure_ffw_sg2_joint_drives(self):
+        #Set joint drive stiffness/damping/target for ffw_sg2_follower.
+        #The URDF only specifies damping=0.1 with no stiffness, so the USD
+        #defaults to stiffness=0 and target=0, causing joints to snap to zero pose.
+        #We set initial drive targets from robot config so the robot holds its
+        #initial pose from the moment physics starts.
+        
+        import math
+
+        stage = self._stage
+        if not stage:
+            return
+
+        robot_prim_path = self.robot_cfg.robot_prim_path
+        prim = stage.GetPrimAtPath(robot_prim_path)
+        if not prim.IsValid():
+            return
+
+        # Build joint name -> target (radians) map from init_joint_position
+        # Config order: left arm(7) + left gripper(1) + right arm(7) + right gripper(1)
+        init_pos = self.robot_cfg.init_joint_position or []
+        joint_target_map = {}
+        joint_names_ordered = [
+            "arm_l_joint1", "arm_l_joint2", "arm_l_joint3", "arm_l_joint4",
+            "arm_l_joint5", "arm_l_joint6", "arm_l_joint7", "gripper_l_joint1",
+            "arm_r_joint1", "arm_r_joint2", "arm_r_joint3", "arm_r_joint4",
+            "arm_r_joint5", "arm_r_joint6", "arm_r_joint7", "gripper_r_joint1",
+        ]
+        for i, name in enumerate(joint_names_ordered):
+            if i < len(init_pos):
+                joint_target_map[name] = init_pos[i]
+
+        # Head and waist init targets (from FFW_SG2_DEFAULT_STATES)
+        joint_target_map["head_joint1"] = 0.7
+        joint_target_map["head_joint2"] = 0.0
+        joint_target_map["lift_joint"] = -0.1
+
+        count = 0
+        for descendant in Usd.PrimRange(prim):
+            if descendant.IsA(UsdPhysics.RevoluteJoint) or descendant.IsA(UsdPhysics.PrismaticJoint):
+                joint_type = "angular" if descendant.IsA(UsdPhysics.RevoluteJoint) else "linear"
+                drive = UsdPhysics.DriveAPI.Get(descendant, joint_type)
+                if not drive:
+                    drive = UsdPhysics.DriveAPI.Apply(descendant, joint_type)
+                drive.GetStiffnessAttr().Set(1e3)
+                drive.GetDampingAttr().Set(1e-1)
+
+                # Set drive target from init config (USD angular targets are in degrees)
+                prim_name = descendant.GetName()
+                if prim_name in joint_target_map:
+                    target_rad = joint_target_map[prim_name]
+                    target_deg = math.degrees(target_rad)
+                    drive.GetTargetPositionAttr().Set(target_deg)
+
+                count += 1
+
+        logger.info(f"Configured drive stiffness/damping/target for {count} ffw_sg2 joints")
+    """
     def _set_joint_positions(self, target_pose, target_joint_indices, is_trajectory):
         if not len(self.target_joints_pose):
             for idx, value in enumerate(self.robot_interface.get_joint_state()):
@@ -1327,6 +1448,28 @@ class APICore:
                     prim_name = "head_stereo_left_color"
                 elif "head_right" in prim_name:
                     prim_name = "head_stereo_right_color"
+            #====================================================
+            # Aloha
+            #====================================================
+            if "aloha" in self.robot_name:
+                if "top_camera" in prim_name:
+                    prim_name = "cam_high"
+                elif "left_wrist" in prim_name:
+                    prim_name = "cam_left_wrist"
+                elif "right_wrist" in prim_name:
+                    prim_name = "cam_right_wrist"
+            #====================================================
+            # FFW_SG2_FOLLOWER
+            #====================================================
+            if "ffw_sg2_follower" in self.robot_name:
+                if "Head_Camera" in prim_name:
+                    prim_name = "head"
+                elif "Left_Camera" in prim_name:
+                    prim_name = "hand_left"
+                elif "Right_Camera" in prim_name:
+                    prim_name = "hand_right"
+            
+            #====================================================
             self.camera_info_list[prim_name] = {
                 "intrinsic": camera_intrinsic_info[prim],
                 "output": {
@@ -1370,8 +1513,26 @@ class APICore:
                 "/G1/gripper_r_inner_link5",
                 "/G1/gripper_r_outer_link5",
             ]
+        #====================================================
+        # Aloha
+        #====================================================          
+        elif "aloha" in self.robot_cfg.robot_usd:
+            self.gripper_contact_ends = [
+            "/World/aloha_bimanual_geniesim/vx300s_left/vx300s_left_gripper_link",
+            "/World/aloha_bimanual_geniesim/vx300s_right/vx300s_right_gripper_link",
+            ]        
+        #====================================================
+        # FFW_SG2_FOLLOWER
+        #====================================================  
+        elif "ffw_sg2_follower" in self.robot_cfg.robot_usd:
+            self.gripper_contact_ends = [
+                "/ffw_sg2_follower/right_gripper/gripper_r_rh_p12_rn_r1",
+                "/ffw_sg2_follower/right_gripper/gripper_r_rh_p12_rn_r2",
+            ]
+
         else:
             raise ("Undefined robot")
+
 
     def on_ros_tick(self, step_size):
         if not self.enable_ros:
@@ -1423,6 +1584,18 @@ class APICore:
                 "/genie_sim/Right_Camera_depth",
                 "/genie_sim/head_left_camera_rgb",
                 "/genie_sim/head_right_camera_rgb",
+            ]
+        #====================================================
+        # Aloha
+        #====================================================                
+        elif "aloha" in self.task_config["robot"]["robot_cfg"]:
+            self.record_topic_list = [
+            "/tf",
+            "/tf_static",
+            "/joint_states",
+            "/genie_sim/cam_high_rgb",
+            "/genie_sim/cam_left_wrist_rgb",
+            "/genie_sim/cam_right_wrist_rgb",
             ]
         else:
             raise ValueError("Invalid robot cfg")

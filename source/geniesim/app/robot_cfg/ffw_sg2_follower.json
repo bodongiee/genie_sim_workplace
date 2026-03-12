@@ -1,0 +1,94 @@
+{
+    "camera": {
+        "/World/Camera": [
+            848,
+            480
+        ],
+        "/ffw_sg2_follower/head_link2/zed/Head_Camera": [
+            2208,
+            1242,
+            30
+        ],
+        "/ffw_sg2_follower/arm_l_link7/camera_l_bottom_screw_frame/camera_l_link/Left_Camera": [
+            720,
+            1280,
+            30
+        ],
+        "/ffw_sg2_follower/arm_r_link7/camera_r_bottom_screw_frame/camera_r_link/Right_Camera": [
+            720,
+            1280,
+            30
+        ]
+    },
+    "closed_positions": {
+        "left": [
+            1,
+            1
+        ],
+        "right": [
+            1,
+            1
+        ]
+    },
+    "gripper": {
+        "closed_velocities": {
+            "left": [
+                -1.0,
+                -1.0
+            ],
+            "right": [
+                -1.0,
+                -1.0
+            ]
+        },
+        "end_effector_name": {
+            "left": "gripper_l_rh_p12_rn_base",
+            "right": "gripper_r_rh_p12_rn_base"
+        },
+        "end_effector_prim_path": {
+            "left": "/ffw_sg2_follower/arm_l_link7/gripper_l_rh_p12_rn_base",
+            "right": "/ffw_sg2_follower/arm_r_link7/gripper_r_rh_p12_rn_base"
+        },
+        "finger_names": {
+            "left": [
+                "gripper_l_joint1",
+                "gripper_l_joint3"
+            ],
+            "right": [
+                "gripper_r_joint1",
+                "gripper_r_joint3"
+            ]
+        },
+        "gripper_control_joint": {
+            "left": "/ffw_sg2_follower/joints/gripper_l_joint1",
+            "right": "/ffw_sg2_follower/joints/gripper_r_joint1"
+        },
+        "gripper_name": {
+            "left": "rh_p12_rn",
+            "right": "rh_p12_rn"
+        },
+        "gripper_type": "angular",
+        "max_force": -1,
+        "opened_positions": {
+            "left": [
+                0.1,
+                0.1
+            ],
+            "right": [
+                0.1,
+                0.1
+            ]
+        }
+    },
+    "robot": {
+        "arm": "right",
+        "base_prim_path": "/ffw_sg2_follower",
+        "dof_nums": 7,
+        "init_joint_position": [],
+        "initial_position": [],
+        "joint_delta_time": 0.01,
+        "lock_joints": [],
+        "robot_name": "ffw_sg2_follower",
+        "robot_usd": "robot/ai_worker_geniesim/ffw_sg2.usd"
+    }
+}

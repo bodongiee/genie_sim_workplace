@@ -1,7 +1,7 @@
 {
-  "api_key": "YOUR_API_KEY",
-  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-  "dashscope_mode": true,
-  "dimension": 2048,
-  "model": "text-embedding-v4"
+  "api_key": "AIzaSyBFMO1fM8_FbrotN_HIKIKtwN0aGVs1j9I", 
+  "base_url": "https://generativelanguage.googleapis.com/v1/openai",
+  "dashscope_mode": false,
+  "dimension": 768,
+  "model": "text-embedding-004"
 }

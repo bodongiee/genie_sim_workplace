@@ -43,6 +43,15 @@ def mat2xyzrpy(mat):
 
 class IKFKSolver:
     def __init__(self, arm_init_joint_position, head_init_position, waist_init_position, robot_cfg="G1_omnipicker"):
+        self.robot_cfg = robot_cfg
+
+        if "aloha" in robot_cfg or "ffw_sg2" in robot_cfg:
+            # Aloha uses vx300s - no G1/G2 IK/FK solver needed
+            self.left_solver = None
+            self.right_solver = None
+            self._arm_init = arm_init_joint_position
+            return
+
         if "G2" in robot_cfg:
             urdf_name, config_name = "G2_NO_GRIPPER.urdf", "g2_solver.yaml"
         else:
@@ -90,6 +99,8 @@ class IKFKSolver:
         Returns dict {"left": [x,y,z,qw,qx,qy,qz], "right": [x,y,z,qw,qx,qy,qz]}
         in the arm_base_link frame.
         """
+        if self.left_solver is None:
+            return {"left": [0.0] * 7, "right": [0.0] * 7}
         left_joints = np.asarray(arm_joint_states[:7], dtype=np.float32)
         right_joints = np.asarray(arm_joint_states[7:14], dtype=np.float32)
 
@@ -107,6 +118,8 @@ class IKFKSolver:
         }
 
     def eef_actions_to_joint(self, eef_actions, arm_joint_states, head_init_position):
+        if self.left_solver is None:
+            return []
         joint_actions = []
         self.left_solver.sync_target_with_joints(arm_joint_states[:7])
         self.right_solver.sync_target_with_joints(arm_joint_states[7:14])

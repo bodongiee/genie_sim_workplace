@@ -18,17 +18,23 @@ class RobotCfg(Robot):
     def __init__(self, cfg_file):
         with open(cfg_file, "r") as f:
             robot_cfg = json.load(f)
+        # =========================================================
         # init robot
+        # =========================================================
         super(RobotCfg, self).__init__(robot_cfg["robot"]["robot_name"])
         if "G1" in self.robot_name:
             self.robot_generation = "G1"
         elif "G2" in self.robot_name:
             self.robot_generation = "G2"
+        elif "aloha" in self.robot_name.lower():
+            self.robot_generation = "aloha"
+        elif "ffw_sg2" in self.robot_name.lower():
+            self.robot_generation = "ffw_sg2"
         else:
             raise ValueError("robot name error")
         self.cam_prim_path = robot_cfg["camera"].keys()
         self.robot_prim_path = robot_cfg["robot"]["base_prim_path"]
-        self.urdf_name = robot_cfg["robot"]["urdf_name"]
+        self.urdf_name = robot_cfg["robot"].get("urdf_name", "")
         self.arm_type = robot_cfg["robot"]["arm"]
         if robot_cfg["robot"]["arm"] == "single":
             self.is_single = True
@@ -57,8 +63,7 @@ class RobotCfg(Robot):
         self.left_gripper_name = gripper_names["left"]
         self.right_gripper_name = gripper_names["right"]
 
-        if robot_cfg["robot"]["arm"] == "dual":
-
+        if robot_cfg["robot"]["arm"] in ("dual", "both"):
             self.end_effector_name = robot_cfg["gripper"]["end_effector_name"]
         elif robot_cfg["robot"]["arm"] == "right":
             self.end_effector_name = robot_cfg["gripper"]["end_effector_name"]["right"]

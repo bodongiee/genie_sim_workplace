@@ -89,6 +89,22 @@ class DataCourier:
                     "right_hand": "right_camera",
                 }
             )
+        elif self.robot_cfg == "aloha":
+            return self.api_core.get_observation_image(
+                {
+                    "head": "top_camera",
+                    "left_hand": "left_wrist_camera",
+                    "right_hand": "right_wrist_camera",
+                }
+            )
+        elif self.robot_cfg == "ffw_sg2_follower":
+            return self.api_core.get_observation_image(
+                {
+                    "head": "head_camera",
+                    "left_hand": "left_camera",
+                    "right_hand": "right_camera",
+                }
+            )
         else:
             raise ValueError(f"Invalid robot cfg: {self.robot_cfg}")
 

@@ -75,7 +75,10 @@ class DummyEnv(BaseEnv):
 
     def reset(self):
         self._followed_objects = set()  # Clear on new scene/episode (scene generalization)
-        init_gripper = [1 - v for v in self.init_gripper]
+        if self.robot_cfg == "aloha":
+            init_gripper = self.init_gripper
+        else:
+            init_gripper = [1 - v for v in self.init_gripper]
         self.robot_joint_indices = self.api_core.get_robot_joint_indices()
         if self.robot_cfg == "G1_omnipicker":
             self.api_core.set_joint_positions(
@@ -117,5 +120,37 @@ class DummyEnv(BaseEnv):
             self.api_core.set_joint_positions(
                 init_gripper,
                 joint_indices=[self.robot_joint_indices[v] for v in OMNIPICKER_AJ_NAMES],
+                is_trajectory=False,
+            )
+        elif self.robot_cfg == "aloha":
+            self.api_core.set_joint_positions(
+                self.init_arm,
+                joint_indices=[self.robot_joint_indices[v] for v in ALOHA_DUAL_ARM_JOINT_NAMES],
+                is_trajectory=False,
+            )
+            self.api_core.set_joint_positions(
+                init_gripper,
+                joint_indices=[self.robot_joint_indices[v] for v in ALOHA_GRIPPER_NAMES],
+                is_trajectory=False,
+            )
+        elif self.robot_cfg == "ffw_sg2_follower":
+            self.api_core.set_joint_positions(
+                self.init_arm,
+                joint_indices=[self.robot_joint_indices[v] for v in FFW_SG2_DUAL_ARM_JOINT_NAMES],
+                is_trajectory=False,
+            )
+            self.api_core.set_joint_positions(
+                self.init_waist,
+                joint_indices=[self.robot_joint_indices[v] for v in FFW_SG2_WAIST_JOINT_NAMES],
+                is_trajectory=False,
+            )  
+            self.api_core.set_joint_positions(
+                self.init_head,
+                joint_indices=[self.robot_joint_indices[v] for v in FFW_SG2_HEAD_JOINT_NAMES],
+                is_trajectory=False,
+            )
+            self.api_core.set_joint_positions(
+                init_gripper,
+                joint_indices=[self.robot_joint_indices[v] for v in FFW_SG2_GRIPPER_JOINTS_NAMES],
                 is_trajectory=False,
             )
