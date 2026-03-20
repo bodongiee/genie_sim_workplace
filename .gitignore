@@ -29,7 +29,7 @@ record*/
 .vscode/*
 checkpoint
 checkpoints
-
+openpi
 source/geniesim/app/robot_cfg/*_recording.json
 
 default.etcd

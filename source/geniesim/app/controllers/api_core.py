@@ -798,65 +798,7 @@ class APICore:
                     stack.append(child)
 
         logger.info(f"Removed CollisionAPI from {total_removed} finger prims")
-    """
-    def _configure_ffw_sg2_joint_drives(self):
-        #Set joint drive stiffness/damping/target for ffw_sg2_follower.
-        #The URDF only specifies damping=0.1 with no stiffness, so the USD
-        #defaults to stiffness=0 and target=0, causing joints to snap to zero pose.
-        #We set initial drive targets from robot config so the robot holds its
-        #initial pose from the moment physics starts.
-        
-        import math
 
-        stage = self._stage
-        if not stage:
-            return
-
-        robot_prim_path = self.robot_cfg.robot_prim_path
-        prim = stage.GetPrimAtPath(robot_prim_path)
-        if not prim.IsValid():
-            return
-
-        # Build joint name -> target (radians) map from init_joint_position
-        # Config order: left arm(7) + left gripper(1) + right arm(7) + right gripper(1)
-        init_pos = self.robot_cfg.init_joint_position or []
-        joint_target_map = {}
-        joint_names_ordered = [
-            "arm_l_joint1", "arm_l_joint2", "arm_l_joint3", "arm_l_joint4",
-            "arm_l_joint5", "arm_l_joint6", "arm_l_joint7", "gripper_l_joint1",
-            "arm_r_joint1", "arm_r_joint2", "arm_r_joint3", "arm_r_joint4",
-            "arm_r_joint5", "arm_r_joint6", "arm_r_joint7", "gripper_r_joint1",
-        ]
-        for i, name in enumerate(joint_names_ordered):
-            if i < len(init_pos):
-                joint_target_map[name] = init_pos[i]
-
-        # Head and waist init targets (from FFW_SG2_DEFAULT_STATES)
-        joint_target_map["head_joint1"] = 0.7
-        joint_target_map["head_joint2"] = 0.0
-        joint_target_map["lift_joint"] = -0.1
-
-        count = 0
-        for descendant in Usd.PrimRange(prim):
-            if descendant.IsA(UsdPhysics.RevoluteJoint) or descendant.IsA(UsdPhysics.PrismaticJoint):
-                joint_type = "angular" if descendant.IsA(UsdPhysics.RevoluteJoint) else "linear"
-                drive = UsdPhysics.DriveAPI.Get(descendant, joint_type)
-                if not drive:
-                    drive = UsdPhysics.DriveAPI.Apply(descendant, joint_type)
-                drive.GetStiffnessAttr().Set(1e3)
-                drive.GetDampingAttr().Set(1e-1)
-
-                # Set drive target from init config (USD angular targets are in degrees)
-                prim_name = descendant.GetName()
-                if prim_name in joint_target_map:
-                    target_rad = joint_target_map[prim_name]
-                    target_deg = math.degrees(target_rad)
-                    drive.GetTargetPositionAttr().Set(target_deg)
-
-                count += 1
-
-        logger.info(f"Configured drive stiffness/damping/target for {count} ffw_sg2 joints")
-    """
     def _set_joint_positions(self, target_pose, target_joint_indices, is_trajectory):
         if not len(self.target_joints_pose):
             for idx, value in enumerate(self.robot_interface.get_joint_state()):
@@ -1526,8 +1468,8 @@ class APICore:
         #====================================================  
         elif "ffw_sg2_follower" in self.robot_cfg.robot_usd:
             self.gripper_contact_ends = [
+                "/ffw_sg2_follower/left_gripper/gripper_l_rh_p12_rn_l1",
                 "/ffw_sg2_follower/right_gripper/gripper_r_rh_p12_rn_r1",
-                "/ffw_sg2_follower/right_gripper/gripper_r_rh_p12_rn_r2",
             ]
 
         else:
