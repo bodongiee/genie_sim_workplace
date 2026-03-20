@@ -25,6 +25,10 @@ from geniesim.utils.infer_post_process import *
 GRIPPER_CLOSE = 0.021
 GRIPPER_OPEN = 0.057
 
+# ffw_sg2 gripper: revolute joint range [0.0, 1.1] rad
+FFW_SG2_GRIPPER_CLOSE = 0.0
+FFW_SG2_GRIPPER_OPEN = 1.1
+
 class PiEnv(DummyEnv):
     def __init__(
         self,
@@ -40,6 +44,7 @@ class PiEnv(DummyEnv):
             need_setup,
         )
         self.LIMIT_VAL = 1.0
+        self.FFW_SG2_LIMIT_VAL = FFW_SG2_GRIPPER_OPEN  # 1.1 rad
         self.load_task_setup()
 
     def load_task_setup(self):
@@ -100,27 +105,33 @@ class PiEnv(DummyEnv):
 
         self.cur_arm = deepcopy(raw_states)
 
-        if "aloha" not in self.robot_cfg and "ffw_sg2_follower" not in self.robot_cfg:
-            for name in OMNIPICKER_AJ_NAMES:
-                states.append(full_joint_states[name])
+        if "aloha" not in self.robot_cfg:
+            if "ffw_sg2_follower" in self.robot_cfg:
+                for name in FFW_SG2_GRIPPER_JOINTS_NAMES:
+                    states.append(full_joint_states[name])
+            else:
+                for name in OMNIPICKER_AJ_NAMES:
+                    states.append(full_joint_states[name])
 
         if "G2" in self.robot_cfg:
             for name in G2_WAIST_JOINT_NAMES[::-1]:
                 states.append(full_joint_states[name])
 
         if "ffw_sg2_follower" in self.robot_cfg:
-            for name in FFW_SG2_WAIST_JOINT_NAMES[::-1]:
+            # Use only first 5 waist joints (reversed) to match G2 state dimension (21)
+            for name in FFW_SG2_WAIST_JOINT_NAMES[:5][::-1]:
                 states.append(full_joint_states[name])
-            
+
         obs = {"images": images, "states": states}
 
         # Left/right gripper center eef pose [x, y, z, qw, qx, qy, qz]
         # Compute EEF using raw sim states (matching URDF)
-        if "aloha" in self.robot_cfg in self.robot_cfg:
+        if "aloha" in self.robot_cfg:
             obs["eef"] = {"left": [0.0] * 7, "right": [0.0] * 7}
         else:
+            print("[DEBUG]Solving IK")
             obs["eef"] = self.ikfk_solver.compute_eef(self.cur_arm)
-
+            print("[DEBUG]Donea solving IK")
         if "aloha" not in self.robot_cfg:
             relabel_gripper_state(obs, self.LIMIT_VAL)
         return obs
@@ -242,7 +253,7 @@ class PiEnv(DummyEnv):
             self.api_core.set_joint_positions([float(v) for v in aloha_arm_action], joint_indices=[self.robot_joint_indices[v] for v in ALOHA_DUAL_ARM_JOINT_NAMES], is_trajectory=True)
             self.api_core.set_joint_positions([float(v) for v in aloha_gripper_commands], joint_indices=[self.robot_joint_indices[v] for v in ALOHA_GRIPPER_NAMES], is_trajectory=True)
         else:
-            action = process_action(None, self.cur_arm, action, type="abs_joint", smooth_alpha=0.5)
+            action = process_action(self.ikfk_solver, self.cur_arm, action, type="abs_ee", smooth_alpha=0.5)
             gripper_action = relabel_gripper_action(action[14:16], self.LIMIT_VAL)
             if self.robot_cfg == "G1_omnipicker":
                 self.api_core.set_joint_positions([float(v) for v in action[:14]],joint_indices=[self.robot_joint_indices[v] for v in G1_DUAL_ARM_JOINT_NAMES],is_trajectory=True)
@@ -256,7 +267,7 @@ class PiEnv(DummyEnv):
                 self.api_core.set_joint_positions([float(v) for v in action[:14]],joint_indices=[self.robot_joint_indices[v] for v in FFW_SG2_DUAL_ARM_JOINT_NAMES],is_trajectory=True)
                 self.api_core.set_joint_positions([float(v) for v in gripper_action], joint_indices=[self.robot_joint_indices[v] for v in FFW_SG2_GRIPPER_JOINTS_NAMES], is_trajectory=True)
                 if len(action) > 16: # Including waist control
-                    self.api_core.set_joint_positions([float(v) for v in action[20:21]],joint_indices=[self.robot_joint_indices[v] for v in G2_WAIST_JOINT_NAMES[0:1]],is_trajectory=True)
+                    self.api_core.set_joint_positions([float(v) for v in action[20:21]],joint_indices=[self.robot_joint_indices[v] for v in FFW_SG2_WAIST_JOINT_NAMES[0:1]],is_trajectory=True)
         # fmt: on
         next_obs = self.get_observation()
         if self.data_courier.enable_ros:

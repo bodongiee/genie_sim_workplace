@@ -10,31 +10,8 @@ import time
 
 def relabel_gripper_state(obs, limit):
     state_dict = obs["states"]
-    # The last 2 elements of the state vector are the gripper states (G1/G2: 14, 15 | Aloha: 12, 13)
-    if "G2" in obs.get("robot_cfg", ""):
-        # For G2 with waist, gripper might be earlier, but assume last two for now or offset from end
-        pass # Actually states length is dynamic. We should use the last two elements before waist if present or just -1/-2.
-    
-    # Safely index the last two elements of the arm before waist if applicable. 
-    # But usually gripper states are always added last, or right after arm.
-    # In pi_env.py, G2 waist joints are appended *after* gripper joints.
-    
-    # A safer approach: just use negative indexing based on how many gripper states there are? 
-    # Actually wait, in pi_env.py:
-    # 1. G1/G2: Arm (14) + Gripper (2) + Waist (0 or 5)
-    # 2. Aloha (OpenPI format): Left Arm (6) + Left Gripper (1) + Right Arm (6) + Right Gripper (1) -> Total 14
-
-    if "aloha" in obs.get("robot_cfg", "aloha") or len(state_dict) == 14:
-        # OpenPI 14-D format interleaves them
-        g_idx1 = 6
-        g_idx2 = 13
-    else:
-        # Default G1/G2 format where grippers are after arm 14
-        g_idx1 = 14
-        g_idx2 = 15
-    
-    state_dict[g_idx1] = min(max(1 - state_dict[g_idx1] / limit, 0), 1) * 100 + 20
-    state_dict[g_idx2] = min(max(1 - state_dict[g_idx2] / limit, 0), 1) * 100 + 20
+    state_dict[14] = min(max(1 - state_dict[14] / limit, 0), 1) * 100 + 20
+    state_dict[15] = min(max(1 - state_dict[15] / limit, 0), 1) * 100 + 20
 
 
 def relabel_gripper_action(action, limit):
