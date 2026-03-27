@@ -750,6 +750,8 @@ class APICore:
         #====================================================  
         elif "ffw_sg2_follower" in self.robot_name:
             viewport.set_active_camera("/ffw_sg2_follower/head_link2/zed/Head_Camera")
+        elif "ffw_sh5_follower" in self.robot_name:
+            viewport.set_active_camera("/ffw_sh5_follower/base_link/head_link2/zed/Head_Camera")
 
 
         time.sleep(1)
@@ -1410,7 +1412,14 @@ class APICore:
                     prim_name = "hand_left"
                 elif "Right_Camera" in prim_name:
                     prim_name = "hand_right"
-            
+
+            if "ffw_sh5_follower" in self.robot_name:
+                if "Head_Camera" in prim_name:
+                    prim_name = "head"
+                elif "Left_Camera" in prim_name:
+                    prim_name = "hand_left"
+                elif "Right_Camera" in prim_name:
+                    prim_name = "hand_right"
             #====================================================
             self.camera_info_list[prim_name] = {
                 "intrinsic": camera_intrinsic_info[prim],
@@ -1471,7 +1480,17 @@ class APICore:
                 "/ffw_sg2_follower/left_gripper/gripper_l_rh_p12_rn_l1",
                 "/ffw_sg2_follower/right_gripper/gripper_r_rh_p12_rn_r1",
             ]
-
+        elif "ffw_sh5_follower" in self.robot_cfg.robot_usd:
+            self.gripper_contact_ends = [
+                "/ffw_sh5_follower/base_link/hx5_l_base/finger_l_link5",
+                "/ffw_sh5_follower/base_link/hx5_l_base/finger_l_link10",
+                "/ffw_sh5_follower/base_link/hx5_l_base/finger_l_link15",
+                "/ffw_sh5_follower/base_link/hx5_l_base/finger_l_link20",
+                "/ffw_sh5_follower/base_link/hx5_r_base/finger_r_link5",
+                "/ffw_sh5_follower/base_link/hx5_r_base/finger_r_link10",
+                "/ffw_sh5_follower/base_link/hx5_r_base/finger_r_link15",
+                "/ffw_sh5_follower/base_link/hx5_r_base/finger_r_link20",
+            ]
         else:
             raise ("Undefined robot")
 

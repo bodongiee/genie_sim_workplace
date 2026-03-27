@@ -10,6 +10,11 @@ saved_task/
 assets/
 assets
 
+zed-isaac-sim
+zed-isaac-sim/
+XRoboToolkit-PC-Service-Pybind
+XRoboToolkit-PC-Service-Pybind/
+
 **/*/data/
 **/__pycache__
 *.pyc

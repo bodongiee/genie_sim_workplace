@@ -100,6 +100,11 @@ class PiEnv(DummyEnv):
                 val = full_joint_states[name]
                 states.append(val)
                 raw_states.append(val)
+        elif "ffw_sh5_follower" in self.robot_cfg:
+            for name in FFW_SH5_DUAL_ARM_JOINT_NAMES:  
+                val = full_joint_states[name]
+                states.append(val)
+                raw_states.append(val)
         else:
             raise ValueError(f"Invalid robot cfg: {self.robot_cfg}")
 
@@ -122,6 +127,10 @@ class PiEnv(DummyEnv):
             for name in FFW_SG2_WAIST_JOINT_NAMES[:5][::-1]:
                 states.append(full_joint_states[name])
 
+        if "ffw_sh5_follower" in self.robot_cfg:
+            for name in FFW_SH5_WAIST_JOINT_NAMES[::-1]:
+                states.append(full_joint_states[name])
+
         obs = {"images": images, "states": states}
 
         # Left/right gripper center eef pose [x, y, z, qw, qx, qy, qz]
@@ -131,7 +140,7 @@ class PiEnv(DummyEnv):
         else:
             print("[DEBUG]Solving IK")
             obs["eef"] = self.ikfk_solver.compute_eef(self.cur_arm)
-            print("[DEBUG]Donea solving IK")
+            print("[DEBUG]Done a solving IK")
         if "aloha" not in self.robot_cfg:
             relabel_gripper_state(obs, self.LIMIT_VAL)
         return obs
@@ -169,7 +178,12 @@ class PiEnv(DummyEnv):
                 self.api_core.set_joint_positions(self.init_waist,joint_indices=[self.robot_joint_indices[v] for v in FFW_SG2_WAIST_JOINT_NAMES],is_trajectory=False)
                 self.api_core.set_joint_positions(self.init_head,joint_indices=[self.robot_joint_indices[v] for v in FFW_SG2_HEAD_JOINT_NAMES],is_trajectory=False)
                 self.api_core.set_joint_positions(init_gripper, joint_indices=[self.robot_joint_indices[v] for v in FFW_SG2_GRIPPER_JOINTS_NAMES], is_trajectory=False)
-
+            elif self.robot_cfg == 'ffw_sh5_follower':
+                self.api_core.set_joint_positions(self.init_arm, joint_indices=[self.robot_joint_indices[v] for v in FFW_SH5_DUAL_ARM_JOINT_NAMES], is_trajectory=False)
+                self.api_core.set_joint_positions(self.init_waist,joint_indices=[self.robot_joint_indices[v] for v in FFW_SH5_WAIST_JOINT_NAMES],is_trajectory=False)
+                self.api_core.set_joint_positions(self.init_head,joint_indices=[self.robot_joint_indices[v] for v in FFW_SH5_HEAD_JOINT_NAMES],is_trajectory=False)
+                #self.api_core.set_joint_positions(init_gripper, joint_indices=[self.robot_joint_indices[v] for v in FFW_SH5_GRIPPER_JOINTS_NAMES], is_trajectory=False)
+                           
             # fmt: on
 
             time.sleep(0.1)
@@ -200,7 +214,14 @@ class PiEnv(DummyEnv):
                     arm_position.append(full_joint_states[name])
                 for name in FFW_SG2_WAIST_JOINT_NAMES:
                     waist_position.append(full_joint_states[name])
-                
+            
+            elif self.robot_cfg == "ffw_sh5_follower":
+                for name in FFW_SH5_DUAL_ARM_JOINT_NAMES:
+                    arm_position.append(full_joint_states[name])
+                for name in FFW_SH5_WAIST_JOINT_NAMES:
+                    waist_position.append(full_joint_states[name])
+
+            
 
             c1 = np.max(np.abs(np.array(arm_position) - np.array(self.init_arm))) < eps
             c2 = len(waist_position) == 0 or np.max(np.abs(np.array(waist_position) - np.array(self.init_waist))) < eps
@@ -268,6 +289,12 @@ class PiEnv(DummyEnv):
                 self.api_core.set_joint_positions([float(v) for v in gripper_action], joint_indices=[self.robot_joint_indices[v] for v in FFW_SG2_GRIPPER_JOINTS_NAMES], is_trajectory=True)
                 if len(action) > 16: # Including waist control
                     self.api_core.set_joint_positions([float(v) for v in action[20:21]],joint_indices=[self.robot_joint_indices[v] for v in FFW_SG2_WAIST_JOINT_NAMES[0:1]],is_trajectory=True)
+            elif self.robot_cfg == "ffw_sh5_follower":
+                self.api_core.set_joint_positions([float(v) for v in action[:14]],joint_indices=[self.robot_joint_indices[v] for v in FFW_SH5_DUAL_ARM_JOINT_NAMES],is_trajectory=True)
+                #self.api_core.set_joint_positions([float(v) for v in gripper_action], joint_indices=[self.robot_joint_indices[v] for v in FFW_SH5_GRIPPER_JOINTS_NAMES], is_trajectory=True)
+                if len(action) > 16: # Including waist control
+                    self.api_core.set_joint_positions([float(v) for v in action[20:21]],joint_indices=[self.robot_joint_indices[v] for v in FFW_SH5_WAIST_JOINT_NAMES[0:1]],is_trajectory=True)
+                            
         # fmt: on
         next_obs = self.get_observation()
         if self.data_courier.enable_ros:

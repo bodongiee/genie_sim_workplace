@@ -154,3 +154,24 @@ class DummyEnv(BaseEnv):
                 joint_indices=[self.robot_joint_indices[v] for v in FFW_SG2_GRIPPER_JOINTS_NAMES],
                 is_trajectory=False,
             )
+        elif self.robot_cfg == "ffw_sh5_follower":
+            self.api_core.set_joint_positions(
+                self.init_arm,
+                joint_indices=[self.robot_joint_indices[v] for v in FFW_SH5_DUAL_ARM_JOINT_NAMES],
+                is_trajectory=False,
+            )
+            self.api_core.set_joint_positions(
+                self.init_waist,
+                joint_indices=[self.robot_joint_indices[v] for v in FFW_SH5_WAIST_JOINT_NAMES],
+                is_trajectory=False,
+            )  
+            self.api_core.set_joint_positions(
+                self.init_head,
+                joint_indices=[self.robot_joint_indices[v] for v in FFW_SH5_HEAD_JOINT_NAMES],
+                is_trajectory=False,
+            )
+#           self.api_core.set_joint_positions(
+#                init_gripper,
+#                joint_indices=[self.robot_joint_indices[v] for v in FFW_SG2_GRIPPER_JOINTS_NAMES],
+#                is_trajectory=False,
+#            )

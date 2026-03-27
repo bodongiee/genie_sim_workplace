@@ -108,6 +108,8 @@ class IKFKSolver:
             urdf_name, config_name = "G2_NO_GRIPPER.urdf", "g2_solver.yaml"
         elif "ffw_sg2_follower" in robot_cfg:
             urdf_name, config_name = "ffw_sg2_follower.urdf", "ffw_sg2_follower_solver.yaml"
+        elif "ffw_sh5_follower" in robot_cfg:
+            urdf_name, config_name = "ffw_sh5_follower.urdf", "ffw_sh5_follower_solver.yaml"
         else:
             urdf_name, config_name = "G1_NO_GRIPPER.urdf", "g1_solver.yaml"
 

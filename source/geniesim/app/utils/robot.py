@@ -30,6 +30,8 @@ class RobotCfg(Robot):
             self.robot_generation = "aloha"
         elif "ffw_sg2_follower" in self.robot_name.lower():
             self.robot_generation = "ffw_sg2_follower"
+        elif "ffw_sh5_follower" in self.robot_name.lower():
+            self.robot_generation = "ffw_sh5_follower" 
         else:
             raise ValueError("robot name error")
         self.cam_prim_path = robot_cfg["camera"].keys()

@@ -222,6 +222,112 @@ FFW_SG2_GRIPPER_JOINTS_NAMES = [
 
 FFW_SG2_JOINT_NAMES = FFW_SG2_DUAL_ARM_JOINT_NAMES + FFW_SG2_HEAD_JOINT_NAMES
 
+
+
+FFW_SH5_JOINT_NAMES = [
+    "arm_l_joint1",
+    "arm_l_joint2",
+    "arm_l_joint3",
+    "arm_l_joint4",
+    "arm_l_joint5",
+    "arm_l_joint6",
+    "arm_l_joint7",
+    "arm_r_joint1",
+    "arm_r_joint2",
+    "arm_r_joint3",
+    "arm_r_joint4",
+    "arm_r_joint5",
+    "arm_r_joint6",
+    "arm_r_joint7",
+]
+
+FFW_SH5_LEFT_ARM_JOINT_NAMES = [
+    "arm_l_joint1",
+    "arm_l_joint2",
+    "arm_l_joint3",
+    "arm_l_joint4",
+    "arm_l_joint5",
+    "arm_l_joint6",
+    "arm_l_joint7",
+]
+
+FFW_SH5_RIGHT_ARM_JOINT_NAMES = [
+    "arm_r_joint1",
+    "arm_r_joint2",
+    "arm_r_joint3",
+    "arm_r_joint4",
+    "arm_r_joint5",
+    "arm_r_joint6",
+    "arm_r_joint7",
+]
+
+FFW_SH5_DUAL_ARM_JOINT_NAMES = FFW_SH5_LEFT_ARM_JOINT_NAMES + FFW_SH5_RIGHT_ARM_JOINT_NAMES
+
+FFW_SH5_HEAD_JOINT_NAMES = [
+    "head_joint1",
+    "head_joint2",
+]
+
+FFW_SH5_WAIST_JOINT_NAMES = [
+    "lift_joint",
+    "left_wheel_steer_joint",
+    "left_wheel_drive_joint",
+    "right_wheel_steer_joint",
+    "right_wheel_drive_joint",
+    "rear_wheel_steer_joint",
+    "rear_wheel_drive_joint",
+]
+
+FFW_SH5_LEFT_HAND_JOINT_NAMES = [
+    "finger_l_joint1",
+    "finger_l_joint2",
+    "finger_l_joint3",
+    "finger_l_joint4",
+    "finger_l_joint5",
+    "finger_l_joint6",
+    "finger_l_joint7",
+    "finger_l_joint8",
+    "finger_l_joint9",
+    "finger_l_joint10",
+    "finger_l_joint11",
+    "finger_l_joint12",
+    "finger_l_joint13",
+    "finger_l_joint14",
+    "finger_l_joint15",
+    "finger_l_joint16",
+    "finger_l_joint17",
+    "finger_l_joint18",
+    "finger_l_joint19",
+    "finger_l_joint20",
+]
+
+FFW_SH5_RIGHT_HAND_JOINT_NAMES = [
+    "finger_r_joint1",
+    "finger_r_joint2",
+    "finger_r_joint3",
+    "finger_r_joint4",
+    "finger_r_joint5",
+    "finger_r_joint6",
+    "finger_r_joint7",
+    "finger_r_joint8",
+    "finger_r_joint9",
+    "finger_r_joint10",
+    "finger_r_joint11",
+    "finger_r_joint12",
+    "finger_r_joint13",
+    "finger_r_joint14",
+    "finger_r_joint15",
+    "finger_r_joint16",
+    "finger_r_joint17",
+    "finger_r_joint18",
+    "finger_r_joint19",
+    "finger_r_joint20",
+]
+
+FFW_SH5_JOINT_NAMES = FFW_SH5_DUAL_ARM_JOINT_NAMES + FFW_SH5_HEAD_JOINT_NAMES
+FFW_SH5_HAND_JOINT_NAMES = FFW_SH5_LEFT_HAND_JOINT_NAMES + FFW_SH5_RIGHT_HAND_JOINT_NAMES
+
+
 def robot_type_mapping(robot_type):
     if "G1_omnipicker" in robot_type:
         return "G1_omnipicker"
@@ -231,5 +337,7 @@ def robot_type_mapping(robot_type):
         return "aloha"
     elif "ffw_sg2_follower" in robot_type:
         return "ffw_sg2_follower"
+    elif "ffw_sh5_follower" in robot_type:
+        return "ffw_sh5_follower"
     else:
         raise ValueError(f"Invalid robot type: {robot_type}")
