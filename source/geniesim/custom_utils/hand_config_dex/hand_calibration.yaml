@@ -1,0 +1,102 @@
+calibration:
+  human_hand:
+    size: 0.2
+
+  robot_hand:
+    shadow:
+      size: 0.218
+  vr:
+    PICO:
+      finger_chains:
+        index: [6, 7, 8, 9, 10]
+        middle: [11, 12, 13, 14, 15]
+        ring: [16, 17, 18, 19, 20]
+        pinky: [21, 22, 23, 24, 25]
+      finger_tips:
+        index: 10
+        middle: 15
+        ring: 20
+        pinky: 25
+      finger_dips:
+        index: 9
+        middle: 14
+        ring: 19
+        pinky: 24
+      wrist: 1
+      thumb_tip: 5
+      thumb_dip: 4
+      joint_angle_names:
+        index: ["MCP", "PIP", "DIP"]
+        middle: ["MCP", "PIP", "DIP"]
+        ring: ["MCP", "PIP", "DIP"]
+        pinky: ["MCP", "PIP", "DIP"]
+
+  left:
+    open:
+      index_mcp: 172.7
+      index_pip: 179.6
+      index_dip: 178.5
+
+      middle_mcp: 165.8
+      middle_pip: 178.3
+      middle_dip: 177.6
+
+      ring_mcp: 166.6
+      ring_pip: 177.3
+      ring_dip: 177.8
+
+      pinky_mcp: 162.9
+      pinky_pip: 177.1
+      pinky_dip: 179.5
+
+    close:
+      index_mcp: 111.8
+      index_pip: 77.8
+      index_dip: 116.9
+
+      middle_mcp: 104.2
+      middle_pip: 83.2
+      middle_dip: 136.0
+
+      ring_mcp: 97.2
+      ring_pip: 84.0
+      ring_dip: 140.4
+
+      pinky_mcp: 100.0
+      pinky_pip: 87.9
+      pinky_dip: 134.6
+
+  right:
+    open:
+      index_mcp: 174.2
+      index_pip: 179.4
+      index_dip: 177.3                                                        
+
+      middle_mcp: 165.7
+      middle_pip: 175.0
+      middle_dip: 179.5
+
+      ring_mcp: 162.4
+      ring_pip: 172.9
+      ring_dip: 176.0
+
+      pinky_mcp: 159.0
+      pinky_pip: 173.9
+      pinky_dip: 179.1
+
+    close:
+      index_mcp: 105.9
+      index_pip: 82.8
+      index_dip: 125.9
+
+      middle_mcp: 98.3
+      middle_pip: 84.0
+      middle_dip: 130.5
+
+      ring_mcp: 93.8
+      ring_pip: 82.7
+      ring_dip: 141.1
+
+      pinky_mcp: 102.6
+      pinky_pip: 82.8
+      pinky_dip: 131.1

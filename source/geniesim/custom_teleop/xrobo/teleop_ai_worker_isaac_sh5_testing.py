@@ -1,0 +1,612 @@
+# =============================================================================
+# FFW SG2 Follower Teleop in Isaac Sim with Genie Sim IK Solver.
+# Isaac Sim's SimulationApp / World / SingleArticulation APIs.
+# =============================================================================
+import os
+import sys
+import time
+import numpy as np
+import argparse
+
+# =============================================================================
+# Args Helper
+# =============================================================================
+parser = argparse.ArgumentParser()
+parser.add_argument("--headless", action="store_true", default=False)
+parser.add_argument("--robot-usd", type=str, default=None)
+parser.add_argument("--scale-factor", type=float, default=1)
+parser.add_argument("--physics-dt", type=float, default=1.0 / 120.0)
+parser.add_argument("--rendering-dt", type=float, default=1.0 / 60.0)
+parser.add_argument("--input-mode", type=str, default="hand_tracking", choices=["controller", "hand_tracking", "keyboard"], help="Input mode: 'controller' for VR controller, 'hand_tracking' for VR hand wrist, 'keyboard' for keyboard-toggled hand tracking")
+parser.add_argument("--pico-ip", type=str, default="192.168.50.217", help="PICO VR IP address for video streaming")
+parser.add_argument("--pico-stream-port", type=int, default=12345, help="PICO VR streaming port (0=disable)")
+parser.add_argument("--stream-eye-res", type=str, default="1280x720", help="Per-eye resolution WxH (SBS output will be 2W x H)")
+parser.add_argument("--stream-fps", type=int, default=90, help="Video stream FPS")
+parser.add_argument("--stream-bitrate", type=int, default=8000000, help="Video stream bitrate (bps)")
+parser.add_argument("--stream-skip", type=int, default=1, help="Encode every Nth render frame (1=every frame)")
+parser.add_argument("--ipd", type=float, default=0.063, help="Inter-pupillary distance in meters (ZED Mini=0.063)")
+args, _unknown = parser.parse_known_args()
+
+# =============================================================================
+# XRoboToolkit SDK — init BEFORE SimulationApp so the SDK's background
+# network thread is established before Isaac Sim takes over signal/network.
+# =============================================================================
+
+import xrobotoolkit_sdk as xrt
+
+xrt.init()
+_ts = xrt.get_time_stamp_ns()
+_lg = xrt.get_left_grip()
+_rg = xrt.get_right_grip()
+
+# =============================================================================
+# ===== Isaac Sim app — must be created before any omni imports ======
+# =============================================================================
+from isaacsim import SimulationApp
+simulation_app = SimulationApp({"headless": args.headless, "renderer": "RaytracedLighting",})
+
+from isaacsim.core.api import World
+from isaacsim.core.prims import SingleArticulation
+from isaacsim.core.utils.stage import add_reference_to_stage, get_current_stage
+from isaacsim.core.utils.types import ArticulationAction
+from pxr import UsdPhysics, PhysxSchema, Sdf, Gf, UsdShade
+import omni.kit.commands
+from scipy.spatial.transform import Rotation as R
+
+# =============================================================================
+# ===== Paths & imports =====
+# =============================================================================
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+IK_SDK_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "../../utils/IK-SDK"))
+UTILS_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "../../utils"))
+CUSTOM_UTILS_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "../../custom_utils"))
+GENIESIM_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "../.."))  # source/geniesim/
+SOURCE_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "../../../.."))  # source/
+
+sys.path.insert(0, SCRIPT_DIR)
+sys.path.insert(0, UTILS_DIR)
+sys.path.insert(0, CUSTOM_UTILS_DIR)
+sys.path.insert(0, GENIESIM_DIR)  # for custom_utils.video_sender etc.
+sys.path.insert(0, SOURCE_DIR)  # for geniesim.plugins.logger etc.
+
+from xrobotoolkit_teleop.common.xr_client import XrClient
+from xrobotoolkit_teleop.utils.geometry import R_HEADSET_TO_WORLD
+from teleop.teleop_controller import DualArmIsaacTeleopController
+
+from name_utils import (
+    FFW_SH5_LEFT_ARM_JOINT_NAMES,
+    FFW_SH5_RIGHT_ARM_JOINT_NAMES,
+    FFW_SH5_DUAL_ARM_JOINT_NAMES,
+    FFW_SH5_HEAD_JOINT_NAMES,
+    FFW_SH5_WAIST_JOINT_NAMES,
+    FFW_SH5_HAND_JOINT_NAMES,
+    FFW_SH5_LEFT_HAND_JOINT_NAMES,
+    FFW_SH5_RIGHT_HAND_JOINT_NAMES,)
+
+# Hand gripper physics controller 
+import importlib.util
+_hg_spec = importlib.util.spec_from_file_location(
+    "hand_gripper_hx5_d20",
+    os.path.join(SCRIPT_DIR, "../../app/controllers/hand_gripper_hx5_d20.py"),)
+_hg_mod = importlib.util.module_from_spec(_hg_spec)
+_hg_spec.loader.exec_module(_hg_mod)
+HandGripper = _hg_mod.HandGripper
+
+# Synergy hand control
+from ai_worker_hx5_d20.synergy_utils import (
+    load_synergy_calibration,
+    extract_synergy_values,
+    blend_synergy_pose,
+    CtrlSmoother,
+    GripStateTracker,
+    HX5_ACTUATOR_RANGE,)
+
+from ai_worker_hx5_d20.synergy_preDef_pose import (
+    RIGHT_HAND_OPEN, RIGHT_HAND_GRIP,
+    RIGHT_HAND_PINCH_OTHER_OPEN, RIGHT_HAND_PINCH_OTHER_CLOSE,
+    RIGHT_HAND_PINCH_OPEN_OTHER_CLOSE,
+    LEFT_HAND_OPEN, LEFT_HAND_GRIP,
+    LEFT_HAND_PINCH_OTHER_OPEN, LEFT_HAND_PINCH_OTHER_CLOSE,
+    LEFT_HAND_PINCH_OPEN_OTHER_CLOSE,)
+
+BENCHMARK_CONFIG_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "../../benchmark/config"))
+sys.path.insert(0, BENCHMARK_CONFIG_DIR)
+from robot_init_states import FFW_SH5_DEFAULT_STATES
+
+# Fixed transform from hx5_base -> Control Offset
+_T_HX5_BASE_TO_CONTROL_OFFSET = np.eye(4)
+#_T_HX5_BASE_TO_CONTROL_OFFSET[:3, :3] = R.from_euler("xyz", [0, np.pi, np.pi]).as_matrix()
+_T_HX5_BASE_TO_CONTROL_OFFSET[:3, 3] = [0, 0, -0.02] #0.08
+
+from custom_utils.video_sender import VRStreamer
+from custom_utils.video_sender.isaac_stereo_capture import IsaacStereoCapture
+
+from meshcat import transformations as tf
+
+
+# =============================================================================
+# ===== Entry point =====
+# =============================================================================
+def main():
+    robot_usd = args.robot_usd
+    if robot_usd is None:
+        robot_usd = os.path.join(SCRIPT_DIR, "../../assets/robot/ai_worker_sh5_geniesim/ffw_sh5.usda")
+
+    robot_prim_path = "/ffw_sh5_follower"
+
+    # ===== Phase 1: Create world =====
+    world = World(stage_units_in_meters=1.0, physics_dt=args.physics_dt, rendering_dt=args.rendering_dt,)
+
+    for _ in range(10):
+        world.step(render=True)
+
+    # Physics scene (same as api_core._init_robot_cfg lines 716-725)
+    stage = get_current_stage()
+    scene_prim = UsdPhysics.Scene.Define(stage, Sdf.Path("/physicsScene"))
+    scene_prim.CreateGravityDirectionAttr().Set(Gf.Vec3f(0.0, 0.0, -1.0))
+    scene_prim.CreateGravityMagnitudeAttr().Set(9.81)
+    physics_scene = PhysxSchema.PhysxSceneAPI.Get(stage, "/physicsScene")
+    physics_scene.CreateGpuMaxRigidContactCountAttr(8388608 * 2)
+    physics_scene.CreateGpuMaxRigidPatchCountAttr(163840 * 2)
+    physics_scene.CreateGpuFoundLostPairsCapacityAttr(2097152 * 4)
+    physics_scene.CreateGpuFoundLostAggregatePairsCapacityAttr(33554432 * 2)
+    physics_scene.CreateGpuTotalAggregatePairsCapacityAttr(2097152 * 4)
+    physics_scene.CreateGpuCollisionStackSizeAttr(67108864 * 2)
+    physics_scene.CreateEnableCCDAttr(True)
+
+    #light
+    from pxr import UsdLux, UsdGeom
+    dome = UsdLux.DomeLight.Define(stage, Sdf.Path("/World/DomeLight"))
+    dome.CreateIntensityAttr(1000)
+    dome.CreateColorTemperatureAttr(6500)
+    dome.CreateEnableColorTemperatureAttr().Set(True)
+    distant = UsdLux.DistantLight.Define(stage, Sdf.Path("/World/DistantLight"))
+    distant.CreateIntensityAttr(3000)
+    distant.CreateColorTemperatureAttr(6500)
+    distant.CreateEnableColorTemperatureAttr().Set(True)
+    distant_xform = UsdGeom.Xformable(distant.GetPrim())
+    distant_xform.AddRotateXYZOp().Set(Gf.Vec3f(-45, 30, 0))
+
+    # Background scene from table_task_ffw_sg2.json
+    ASSETS_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "../../assets"))
+    scene_usd_path = os.path.join(ASSETS_DIR, "background/room/room_1/background.usda")
+    #scene_usd_path = os.path.join(ASSETS_DIR, "background/study_room/study_4/background.usda")
+    add_reference_to_stage(usd_path=scene_usd_path, prim_path="/World")
+
+    # Load sub_task scene (table + colored cubes)
+    BENCHMARK_CFG_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "../../benchmark/config"))
+    sub_task_usd = os.path.join(BENCHMARK_CFG_DIR, "llm_task", "clean_the_desktop", "0", "scene.usda")
+    #sub_task_usd = os.path.join(BENCHMARK_CFG_DIR, "llm_task", "bimanual_hold_ball", "0", "scene.usda")
+    add_reference_to_stage(usd_path=sub_task_usd, prim_path="/Workspace")
+    print(f"Loaded sub_task scene: {sub_task_usd}")
+
+    # ===== Phase 2: Load robot =====
+    add_reference_to_stage(usd_path=robot_usd, prim_path=robot_prim_path)
+
+    from isaacsim.core.prims import SingleXFormPrim
+    robot_xform = SingleXFormPrim(
+        prim_path=robot_prim_path,
+        position=np.array([-0.5, -0.02646532841026783, -0.009999999776482582]), 
+        #position=np.array([-0.05, -0, 0.03]),
+        orientation=np.array([1.0, 0.0, 0.0, 0.0]),
+    )
+
+    # ===== Configure joint drive stiffness/damping ======
+    from pxr import Usd
+    robot_prim = stage.GetPrimAtPath(robot_prim_path)
+
+    art_root_path = f"{robot_prim_path}/base_link"
+    art_root_prim = stage.GetPrimAtPath(art_root_path)
+    physx_art_api = PhysxSchema.PhysxArticulationAPI.Apply(art_root_prim)
+    physx_art_api.CreateSolverPositionIterationCountAttr(32)
+    physx_art_api.CreateSolverVelocityIterationCountAttr(8)
+
+    # Fix base to world at the robot's spawn position
+    robot_pos = robot_xform.get_world_pose()[0]
+    fixed_joint = UsdPhysics.FixedJoint.Define(stage, Sdf.Path(f"{robot_prim_path}/FixedJoint"))
+    fixed_joint.CreateBody1Rel().SetTargets([Sdf.Path(f"{robot_prim_path}/base_link/base_link")])
+    fixed_joint.CreateLocalPos0Attr().Set(Gf.Vec3f(float(robot_pos[0]), float(robot_pos[1]), float(robot_pos[2])))
+    fixed_joint.CreateLocalPos1Attr().Set(Gf.Vec3f(0, 0, 0))
+    fixed_joint.CreateLocalRot0Attr().Set(Gf.Quatf(1, 0, 0, 0))
+    fixed_joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
+
+    for prim in Usd.PrimRange(robot_prim):
+
+        for drive_type in ["angular", "linear"]:
+            drive_api = UsdPhysics.DriveAPI.Get(prim, drive_type)
+            if not drive_api:
+                continue
+            joint_name = prim.GetName()
+            
+            if "gripper" in joint_name or "finger" in joint_name:
+                drive_api.GetStiffnessAttr().Set(1e3)
+                drive_api.GetDampingAttr().Set(1e2)
+                drive_api.GetMaxForceAttr().Set(60.0)
+
+            elif any(k in joint_name for k in ["lift", "head_joint"]):
+                drive_api.GetStiffnessAttr().Set(1e6)
+                drive_api.GetDampingAttr().Set(1e5)
+                drive_api.GetMaxForceAttr().Set(1e10)
+
+            elif "wheel" in joint_name:
+                drive_api.GetStiffnessAttr().Set(1e8)
+                drive_api.GetDampingAttr().Set(1e6)
+                drive_api.GetMaxForceAttr().Set(0)
+
+            elif any(k in joint_name for k in ["joint1", "joint2", "joint3"]):
+                drive_api.GetStiffnessAttr().Set(5e5)
+                drive_api.GetDampingAttr().Set(1e3)
+                drive_api.GetMaxForceAttr().Set(1e10)
+                drive_api.GetTypeAttr().Set("acceleration")
+
+            elif any(k in joint_name for k in ["joint4"]):
+                drive_api.GetStiffnessAttr().Set(5e5)
+                drive_api.GetDampingAttr().Set(1e3)
+                drive_api.GetMaxForceAttr().Set(1e10)
+                drive_api.GetTypeAttr().Set("acceleration")
+
+            elif any(k in joint_name for k in ["joint5", "joint6", "joint7"]):
+                drive_api.GetStiffnessAttr().Set(5e5)
+                drive_api.GetDampingAttr().Set(1e3)
+                drive_api.GetMaxForceAttr().Set(1e10)
+                drive_api.GetTypeAttr().Set("acceleration")
+            else:
+                drive_api.GetStiffnessAttr().Set(5e5)
+                drive_api.GetDampingAttr().Set(1e3)
+            print(f"  Drive configured: {joint_name} ({drive_type})"
+                  f" stiffness={drive_api.GetStiffnessAttr().Get()}"
+                  f" damping={drive_api.GetDampingAttr().Get()}")
+            
+    from pxr import Usd, UsdGeom
+
+    # ===== Contact/Rest offset + CCD for hand collision meshes =====
+    for prim in Usd.PrimRange(robot_prim):
+        prim_name = prim.GetName()
+        if ("hx5" in prim_name or "finger" in prim_name):
+            if prim.HasAPI(UsdPhysics.CollisionAPI):
+                physx_collision = PhysxSchema.PhysxCollisionAPI.Apply(prim)
+                physx_collision.CreateContactOffsetAttr(0.002)
+                physx_collision.CreateRestOffsetAttr(0.001)
+
+    # ===== Contact/Rest offset + CCD for workspace objects (ball etc.) =====
+    workspace_prim = stage.GetPrimAtPath("/Workspace")
+    if workspace_prim.IsValid():
+        for prim in Usd.PrimRange(workspace_prim):
+            if prim.HasAPI(UsdPhysics.CollisionAPI):
+                physx_collision = PhysxSchema.PhysxCollisionAPI.Apply(prim)
+                physx_collision.CreateContactOffsetAttr(0.002)
+                physx_collision.CreateRestOffsetAttr(0.001)
+            if prim.HasAPI(UsdPhysics.RigidBodyAPI):
+                PhysxSchema.PhysxRigidBodyAPI.Apply(prim).CreateEnableCCDAttr(True)
+
+    # ===== Phase 3: Play + init articulation =====
+    time.sleep(1)
+    world.play()
+    time.sleep(1)
+
+    articulation = SingleArticulation(prim_path=art_root_path, name="ffw_sh5_follower",)
+    world.scene.add(articulation)
+    articulation.initialize()
+
+    dof_names = list(articulation.dof_names)
+    # ===== FFW_SH5_DEFAULT_STATES from robot_init_states.py =====
+    INIT_ARM = FFW_SH5_DEFAULT_STATES["init_arm"]
+    INIT_HAND = FFW_SH5_DEFAULT_STATES["init_hand"]
+    INIT_HEAD = FFW_SH5_DEFAULT_STATES["head_state"]
+    INIT_WAIST = FFW_SH5_DEFAULT_STATES["body_state"]
+
+    ARM_NAMES = FFW_SH5_DUAL_ARM_JOINT_NAMES
+    HAND_NAMES = FFW_SH5_HAND_JOINT_NAMES
+    HEAD_NAMES = FFW_SH5_HEAD_JOINT_NAMES
+    WAIST_NAMES = FFW_SH5_WAIST_JOINT_NAMES
+
+    def set_joints(names, values):
+        indices = []
+        positions = []
+        for name, val in zip(names, values):
+            if name in dof_names:
+                indices.append(dof_names.index(name))
+                positions.append(float(val))
+        if indices:
+            action = ArticulationAction(joint_positions=np.array(positions),joint_indices=indices,)
+            articulation.apply_action(action)
+
+    set_joints(ARM_NAMES, INIT_ARM)
+    set_joints(HAND_NAMES, INIT_HAND)
+    set_joints(HEAD_NAMES, INIT_HEAD)
+    set_joints(WAIST_NAMES, INIT_WAIST)
+
+    for _ in range(120):
+        world.step(render=True)
+    print("Initial pose set.")
+
+
+    # Hold waist + head joints at init positions every frame to prevent vibration
+    hold_positions = {}
+    for name, val in zip(WAIST_NAMES, INIT_WAIST):
+        hold_positions[name] = val
+    for name, val in zip(HEAD_NAMES, INIT_HEAD):
+        hold_positions[name] = val
+
+    # ===== Hand gripper physics setup via HandGripper =====
+    left_hand_gripper = HandGripper(
+        end_effector_prim_path=f"{robot_prim_path}/base_link/hx5_l_base",
+        joint_prim_names=FFW_SH5_LEFT_HAND_JOINT_NAMES,
+        joint_opened_positions=np.array(LEFT_HAND_OPEN),
+        joint_closed_positions=np.array(LEFT_HAND_GRIP),
+    )
+    right_hand_gripper = HandGripper(
+        end_effector_prim_path=f"{robot_prim_path}/base_link/hx5_r_base",
+        joint_prim_names=FFW_SH5_RIGHT_HAND_JOINT_NAMES,
+        joint_opened_positions=np.array(RIGHT_HAND_OPEN),
+        joint_closed_positions=np.array(RIGHT_HAND_GRIP),
+    )
+    left_hand_gripper.initialize(
+        articulation_apply_action_func=articulation.apply_action,
+        get_joint_positions_func=articulation.get_joint_positions,
+        set_joint_positions_func=articulation.set_joint_positions,
+        dof_names=dof_names,
+    )
+    right_hand_gripper.initialize(
+        articulation_apply_action_func=articulation.apply_action,
+        get_joint_positions_func=articulation.get_joint_positions,
+        set_joint_positions_func=articulation.set_joint_positions,
+        dof_names=dof_names,
+    )
+
+    # Bind high-friction physics material to hand collision meshes
+    hand_material_path = left_hand_gripper.physics_material.prim_path
+    for prim in Usd.PrimRange(stage.GetPrimAtPath(robot_prim_path)):
+        prim_name = prim.GetName()
+        if ("hx5" in prim_name or "finger" in prim_name) and prim.IsA(UsdGeom.Mesh):
+            if not prim.HasAPI(UsdPhysics.CollisionAPI):
+                continue
+            binding_api = UsdShade.MaterialBindingAPI.Apply(prim)
+            binding_api.Bind(
+                UsdShade.Material(stage.GetPrimAtPath(hand_material_path)),
+                UsdShade.Tokens.weakerThanDescendants,
+                "physics",
+            )
+        prim_path_str = str(prim.GetPath())
+        if ("hx5" in prim_path_str or "finger" in prim_path_str):
+            if prim.HasAPI(UsdPhysics.CollisionAPI):
+                binding_api = UsdShade.MaterialBindingAPI.Apply(prim)
+                binding_api.Bind(
+                    UsdShade.Material(stage.GetPrimAtPath(hand_material_path)),
+                    UsdShade.Tokens.weakerThanDescendants,
+                    "physics",
+                )
+    print("Hand gripper physics materials applied.")
+
+    # XR client (reuse already-initialized SDK)
+    xr_client = XrClient.__new__(XrClient)
+    print("XrClient attached (SDK already initialized).")
+
+    camera_config = {
+        "head_camera": "{robot}/base_link/head_link2/zed/Head_Camera",
+        "extra_cameras": [
+            ("Left Camera",  "{robot}/base_link/arm_l_link7/camera_l_bottom_screw_frame/camera_l_link/Left_Camera"),
+            ("Right Camera", "{robot}/base_link/arm_r_link7/camera_r_bottom_screw_frame/camera_r_link/Right_Camera"),
+        ],
+    }
+
+    # SH5: IK target link is hx5_*_base (fixed joint from arm_*_link7).
+    # Use identity for T_link7_to_gripper_base since link_name points directly to hx5_*_base.
+    #_T_LINK7_TO_HX5_BASE = np.eye(4)
+
+    # ===== Phase 4: Create teleop controller and run =====
+    if args.input_mode == "keyboard":
+        manipulator_config = {
+            "left_hand": {
+                "link_name": "hx5_l_base",
+                "hand_side": "left",
+            },
+            "right_hand": {
+                "link_name": "hx5_r_base",
+                "hand_side": "right",
+            },
+        }
+    else:
+        manipulator_config = {
+            "left_hand": {
+                "link_name": "hx5_l_base",
+                "hand_side": "left",
+            },
+            "right_hand": {
+                "link_name": "hx5_r_base",
+                "hand_side": "right",
+            },
+        }
+
+    IK_SDK_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "../../utils/IK-SDK"))
+    ik_urdf_path = os.path.join(IK_SDK_DIR, "ffw_sh5_follower.urdf")
+    ik_config_path = os.path.join(IK_SDK_DIR, "ffw_sh5_follower_solver.yaml")
+
+    controller = DualArmIsaacTeleopController.create(
+        world=world,
+        articulation=articulation,
+        robot_prim_path=robot_prim_path,
+        manipulator_config=manipulator_config,
+        xr_client=xr_client,
+        left_arm_joints=FFW_SH5_LEFT_ARM_JOINT_NAMES,
+        right_arm_joints=FFW_SH5_RIGHT_ARM_JOINT_NAMES,
+        T_link7_to_gripper_base=_T_HX5_BASE_TO_CONTROL_OFFSET,#_T_LINK7_TO_HX5_BASE,
+        ik_urdf_path=ik_urdf_path,
+        ik_config_path=ik_config_path,
+        simulation_app=simulation_app,
+        xrt_module=xrt,
+        R_headset_world=R_HEADSET_TO_WORLD,
+        scale_factor=args.scale_factor,
+        hold_joint_positions=hold_positions,
+        camera_config=camera_config,
+        input_mode=args.input_mode,
+    )
+
+    # =================================================================
+    # Hand synergy controller setup
+    # =================================================================
+    CALIB_YAML = os.path.join(CUSTOM_UTILS_DIR, "ai_worker_hx5_d20", "synergy_calibration.yaml")
+    left_calib = load_synergy_calibration(CALIB_YAML, "left")
+    right_calib = load_synergy_calibration(CALIB_YAML, "right")
+    print(f"Hand calibration loaded (L & R)")
+
+    left_poses = {
+        "open": np.array(LEFT_HAND_OPEN, dtype=np.float64),
+        "grip": np.array(LEFT_HAND_GRIP, dtype=np.float64),
+        "pinch_other_open": np.array(LEFT_HAND_PINCH_OTHER_OPEN, dtype=np.float64),
+        "pinch_other_close": np.array(LEFT_HAND_PINCH_OTHER_CLOSE, dtype=np.float64),
+        "pinch_open_other_close": np.array(LEFT_HAND_PINCH_OPEN_OTHER_CLOSE, dtype=np.float64),
+    }
+    right_poses = {
+        "open": np.array(RIGHT_HAND_OPEN, dtype=np.float64),
+        "grip": np.array(RIGHT_HAND_GRIP, dtype=np.float64),
+        "pinch_other_open": np.array(RIGHT_HAND_PINCH_OTHER_OPEN, dtype=np.float64),
+        "pinch_other_close": np.array(RIGHT_HAND_PINCH_OTHER_CLOSE, dtype=np.float64),
+        "pinch_open_other_close": np.array(RIGHT_HAND_PINCH_OPEN_OTHER_CLOSE, dtype=np.float64),
+    }
+
+    left_smoother = CtrlSmoother(alpha=0.5, max_speed=3.0)
+    right_smoother = CtrlSmoother(alpha=0.5, max_speed=3.0)
+    left_grip_tracker = GripStateTracker()
+    right_grip_tracker = GripStateTracker()
+
+    # Build left-hand actuator range from right-hand (mirror thumb joints 1-4)
+    LEFT_HX5_ACTUATOR_RANGE = {}
+    for rname, (lo, hi) in HX5_ACTUATOR_RANGE.items():
+        lname = rname.replace("finger_r_", "finger_l_")
+        idx = int(rname.split("joint")[1])
+        if idx <= 4:  # thumb joints: mirror the range
+            LEFT_HX5_ACTUATOR_RANGE[lname] = (-hi, -lo)
+        else:
+            LEFT_HX5_ACTUATOR_RANGE[lname] = (lo, hi)
+
+    # =================================================================
+    # Stereo video streamer setup (Isaac Sim stereo camera -> PICO VR)
+    # =================================================================
+    streamer = None
+    stereo_capture = None
+    if args.pico_stream_port > 0:
+        head_cam_path = camera_config["head_camera"].replace("{robot}", robot_prim_path)
+        cam_prim = stage.GetPrimAtPath(head_cam_path)
+        if cam_prim and cam_prim.IsValid():
+            eye_w, eye_h = (int(x) for x in args.stream_eye_res.split("x"))
+            # Create streamer (TCP connection) FIRST — only create render products if connected
+            streamer = VRStreamer(
+                target_ip=args.pico_ip,
+                target_port=args.pico_stream_port,
+                width=eye_w * 2, height=eye_h,
+                fps=args.stream_fps,
+                bitrate=args.stream_bitrate,
+                send_every_n=args.stream_skip,
+            )
+            if streamer.active:
+                # 렌더링 노드 동적 생성 중 크래시 방지를 위해 시뮬레이션을 잠시 일시 정지
+                world.pause()
+                stereo_capture = IsaacStereoCapture( stage=stage, parent_camera_path=head_cam_path, eye_resolution=(eye_w, eye_h), ipd=args.ipd,)
+                world.play()
+            else:
+                print("[VideoStreamer] WARNING: TCP connection failed, stereo capture not created.")
+                streamer = None
+        else:
+            print(f"[VideoStreamer] WARNING: Camera not found at {head_cam_path}, streaming disabled.")
+
+
+
+
+    # =================================================================
+    # Custom run loop with hand synergy control
+    # =================================================================
+    print(f"Teleop started (input_mode={args.input_mode}) with hand control. Ctrl+C to exit...")
+
+    _last_log_time = 0.0
+    _hand_was_active = {"left": True, "right": True}  # start as True so first deactivate triggers freeze
+    app = simulation_app
+
+    while app.is_running():
+        try:
+            # --- Arm teleop update (IK pipeline) ---
+            controller._update()
+
+            # --- Hand synergy control ---
+            # In keyboard mode, gate hand synergy by keyboard activation
+            # poll() is already called in _arm_inputs_keyboard via controller._update()
+            kb = controller.teleop_input._keyboard  # None when not keyboard mode
+
+            for hand_side, calib, poses, smoother, grip_tracker, act_range, hand_gripper in [
+                ("left", left_calib, left_poses, left_smoother, left_grip_tracker,
+                 LEFT_HX5_ACTUATOR_RANGE, left_hand_gripper),
+                ("right", right_calib, right_poses, right_smoother, right_grip_tracker,
+                 HX5_ACTUATOR_RANGE, right_hand_gripper),
+            ]:
+                # Keyboard activation gate: freeze on deactivate, hold frozen positions
+                if kb is not None:
+                    if hand_side == "left":
+                        is_hand_active = kb.is_left_control_key_pressed()
+                    else:
+                        is_hand_active = kb.is_right_control_key_pressed()
+
+                    if not is_hand_active:
+                        if _hand_was_active[hand_side]:
+                            hand_gripper.freeze()
+                            _hand_was_active[hand_side] = False
+                        hand_gripper.hold_current_positions()
+                        continue
+                    else:
+                        _hand_was_active[hand_side] = True
+
+                hand_state = xr_client.get_hand_tracking_state(hand_side)
+                if hand_state is None:
+                    continue
+
+                pico_pos = np.array(hand_state)[:, :3]
+                
+                if pico_pos.size == 0 or np.all(pico_pos == 0):
+                    continue
+
+                try:
+                    pinch_val, grip_val, index_grip_blend = extract_synergy_values(pico_pos, calib)
+                    grip_established = grip_tracker.update(grip_val)
+
+                    target = blend_synergy_pose(pinch_val, grip_val, index_grip_blend, grip_established, poses)
+                    target = smoother.apply(target)
+
+                    # Clamp to actuator range
+                    act_names = list(act_range.keys())
+                    for i in range(len(target)):
+                        if i < len(act_names):
+                            lo, hi = act_range[act_names[i]]
+                            target[i] = np.clip(target[i], lo, hi)
+
+                    hand_gripper.set_target_positions(target)
+                except Exception as e:
+                    print(f"[Hand Tracking] Error processing {hand_side} hand: {e}")
+
+            world.step(render=True)
+
+            # --- Stereo Video Stream: capture SBS frame and send ---
+            if streamer and stereo_capture:
+                try:
+                    sbs_frame = stereo_capture.get_sbs_frame()
+                    if sbs_frame is not None:
+                        streamer.send_frame(sbs_frame)
+                except Exception as e:
+                    print(f"[VideoStreamer] Capture error: {e}")
+
+
+
+            now = time.time()
+            if now - _last_log_time > 0.5:
+                _last_log_time = now
+                controller._log_debug()
+
+        except KeyboardInterrupt:
+            print("\nTeleoperation stopped.")
+            break
+
+    controller.teleop_input.shutdown()
+    if streamer:
+        streamer.shutdown()
+
+    app.close()
+if __name__ == "__main__":
+    main()

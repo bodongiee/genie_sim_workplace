@@ -1,0 +1,112 @@
+{
+    "camera": {
+        "/World/Camera": [
+            848,
+            480
+        ],
+        "/ffw_sh5_follower/base_link/head_link2/zed/Head_Camera": [
+            2208,
+            1242,
+            30
+        ],
+        "/ffw_sh5_follower/base_link/arm_l_link7/camera_l_bottom_screw_frame/camera_l_link/Left_Camera": [
+            720,
+            1280,
+            30
+        ],
+        "/ffw_sh5_follower/base_link/arm_r_link7/camera_r_bottom_screw_frame/camera_r_link/Right_Camera": [
+            720,
+            1280,
+            30
+        ]
+    },
+    "gripper": {
+        "gripper_name": {
+            "left": "hx5_d20",
+            "right": "hx5_d20"
+        },
+        "gripper_type": "angular",
+        "max_force": -1,
+        "end_effector_name": {
+            "left": "hx5_l_base",
+            "right": "hx5_r_base"
+        },
+        "end_effector_prim_path": {
+            "left": "/ffw_sh5_follower/base_link/hx5_l_base",
+            "right": "/ffw_sh5_follower/base_link/hx5_r_base"
+        },
+        "finger_names": {
+            "left": [
+                "finger_l_joint1",
+                "finger_l_joint2",
+                "finger_l_joint3",
+                "finger_l_joint4",
+                "finger_l_joint5",
+                "finger_l_joint6",
+                "finger_l_joint7",
+                "finger_l_joint8",
+                "finger_l_joint9",
+                "finger_l_joint10",
+                "finger_l_joint11",
+                "finger_l_joint12",
+                "finger_l_joint13",
+                "finger_l_joint14",
+                "finger_l_joint15",
+                "finger_l_joint16",
+                "finger_l_joint17",
+                "finger_l_joint18",
+                "finger_l_joint19",
+                "finger_l_joint20"
+            ],
+            "right": [
+                "finger_r_joint1",
+                "finger_r_joint2",
+                "finger_r_joint3",
+                "finger_r_joint4",
+                "finger_r_joint5",
+                "finger_r_joint6",
+                "finger_r_joint7",
+                "finger_r_joint8",
+                "finger_r_joint9",
+                "finger_r_joint10",
+                "finger_r_joint11",
+                "finger_r_joint12",
+                "finger_r_joint13",
+                "finger_r_joint14",
+                "finger_r_joint15",
+                "finger_r_joint16",
+                "finger_r_joint17",
+                "finger_r_joint18",
+                "finger_r_joint19",
+                "finger_r_joint20"
+            ]
+        },
+        "gripper_control_joint": {
+            "left": "/ffw_sh5_follower/joints/finger_l_joint1",
+            "right": "/ffw_sh5_follower/joints/finger_r_joint1"
+        },
+        "opened_positions": {
+            "left": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            "right": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        },
+        "closed_positions": {
+            "left": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+            "right": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        },
+        "closed_velocities": {
+            "left": [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0],
+            "right": [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0]
+        }
+    },
+    "robot": {
+        "arm": "right",
+        "base_prim_path": "/ffw_sh5_follower",
+        "dof_nums": 7,
+        "init_joint_position": [],
+        "initial_position": [],
+        "joint_delta_time": 0.01,
+        "lock_joints": [],
+        "robot_name": "ffw_sh5_follower",
+        "robot_usd": "robot/ai_worker_sh5_geniesim/ffw_sh5.usda"
+    }
+}
