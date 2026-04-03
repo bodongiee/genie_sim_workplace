@@ -18,11 +18,11 @@ parser.add_argument("--scale-factor", type=float, default=1)
 parser.add_argument("--physics-dt", type=float, default=1.0 / 120.0)
 parser.add_argument("--rendering-dt", type=float, default=1.0 / 60.0)
 parser.add_argument("--input-mode", type=str, default="hand_tracking", choices=["controller", "hand_tracking", "keyboard"], help="Input mode: 'controller' for VR controller, 'hand_tracking' for VR hand wrist, 'keyboard' for keyboard-toggled hand tracking")
-parser.add_argument("--pico-ip", type=str, default="192.168.50.217", help="PICO VR IP address for video streaming")
+parser.add_argument("--pico-ip", type=str, default="10.42.0.71", help="PICO VR IP address for video streaming")
 parser.add_argument("--pico-stream-port", type=int, default=12345, help="PICO VR streaming port (0=disable)")
-parser.add_argument("--stream-eye-res", type=str, default="1280x720", help="Per-eye resolution WxH (SBS output will be 2W x H)")
-parser.add_argument("--stream-fps", type=int, default=90, help="Video stream FPS")
-parser.add_argument("--stream-bitrate", type=int, default=8000000, help="Video stream bitrate (bps)")
+parser.add_argument("--stream-eye-res", type=str, default="1024x576", help="Per-eye resolution WxH (SBS output will be 2W x H)")
+parser.add_argument("--stream-fps", type=int, default=60, help="Video stream FPS")
+parser.add_argument("--stream-bitrate", type=int, default=4000000, help="Video stream bitrate (bps)")
 parser.add_argument("--stream-skip", type=int, default=1, help="Encode every Nth render frame (1=every frame)")
 parser.add_argument("--ipd", type=float, default=0.063, help="Inter-pupillary distance in meters (ZED Mini=0.063)")
 parser.add_argument("--drama-ip", type=str, default="127.0.0.1", help="DRAMA server IP (None=disable socket sender)")
@@ -167,19 +167,29 @@ def main():
     distant.CreateIntensityAttr(3000)
     distant.CreateColorTemperatureAttr(6500)
     distant.CreateEnableColorTemperatureAttr().Set(True)
+
     distant_xform = UsdGeom.Xformable(distant.GetPrim())
     distant_xform.AddRotateXYZOp().Set(Gf.Vec3f(-45, 30, 0))
 
     # Background scene from table_task_ffw_sg2.json
     ASSETS_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "../../assets"))
-    scene_usd_path = os.path.join(ASSETS_DIR, "background/room/room_1/background.usda")
+    #NOTE : White room with white desk -0.5
+    #scene_usd_path = os.path.join(ASSETS_DIR, "background/room/room_1/background.usda")
+    #NOTE : Basic room with desk and shelf
     #scene_usd_path = os.path.join(ASSETS_DIR, "background/study_room/study_4/background.usda")
+    #NOTE : KITCHEN 
+    scene_usd_path = os.path.join(ASSETS_DIR, "background/kitchen/kitchen_1/background.usda")
+    
     add_reference_to_stage(usd_path=scene_usd_path, prim_path="/World")
 
     # Load sub_task scene (table + colored cubes)
-    BENCHMARK_CFG_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "../../benchmark/config"))
-    sub_task_usd = os.path.join(BENCHMARK_CFG_DIR, "llm_task", "clean_the_desktop", "0", "scene.usda")
+    #BENCHMARK_CFG_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "../../benchmark/config"))
+    TEST_ENV_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "../../test_environment"))
+    #sub_task_usd = os.path.join(BENCHMARK_CFG_DIR, "llm_task", "pick_object_type", "0", "scene.usda")
     #sub_task_usd = os.path.join(BENCHMARK_CFG_DIR, "llm_task", "bimanual_hold_ball", "0", "scene.usda")
+    #sub_task_usd = os.path.join(BENCHMARK_CFG_DIR, "llm_task", "straighten_object", "0", "scene.usda")
+    sub_task_usd = os.path.join(TEST_ENV_DIR, "kitchen", "scene.usda")
+
     add_reference_to_stage(usd_path=sub_task_usd, prim_path="/Workspace")
     print(f"Loaded sub_task scene: {sub_task_usd}")
 
@@ -189,8 +199,10 @@ def main():
     from isaacsim.core.prims import SingleXFormPrim
     robot_xform = SingleXFormPrim(
         prim_path=robot_prim_path,
+        #NOTE: White room with white desk
         position=np.array([-0.5, -0.02646532841026783, -0.009999999776482582]), 
-        #position=np.array([-0.05, -0, 0.03]),
+        #NOTE: kitchen
+        #position=np.array([0.36, 0.2, 0.03]),
         orientation=np.array([1.0, 0.0, 0.0, 0.0]),
     )
 
@@ -201,7 +213,7 @@ def main():
     art_root_path = f"{robot_prim_path}/base_link"
     art_root_prim = stage.GetPrimAtPath(art_root_path)
     physx_art_api = PhysxSchema.PhysxArticulationAPI.Apply(art_root_prim)
-    physx_art_api.CreateSolverPositionIterationCountAttr(32)
+    physx_art_api.CreateSolverPositionIterationCountAttr(16)
     physx_art_api.CreateSolverVelocityIterationCountAttr(8)
 
     # Fix base to world at the robot's spawn position
@@ -224,7 +236,7 @@ def main():
             if "gripper" in joint_name or "finger" in joint_name:
                 drive_api.GetStiffnessAttr().Set(1e3)
                 drive_api.GetDampingAttr().Set(1e2)
-                drive_api.GetMaxForceAttr().Set(60.0)
+                drive_api.GetMaxForceAttr().Set(72.0)
 
             elif any(k in joint_name for k in ["lift", "head_joint"]):
                 drive_api.GetStiffnessAttr().Set(1e6)
@@ -262,7 +274,8 @@ def main():
             
     from pxr import Usd, UsdGeom
 
-    # ===== Contact/Rest offset + CCD for hand collision meshes =====
+    # ===== Contact/Rest offset + convexDecomposition for hand collision meshes =====
+    # convexDecomposition: articulated body에 안전하고 convexHull보다 형상 정확도 높음
     for prim in Usd.PrimRange(robot_prim):
         prim_name = prim.GetName()
         if ("hx5" in prim_name or "finger" in prim_name):
@@ -270,8 +283,11 @@ def main():
                 physx_collision = PhysxSchema.PhysxCollisionAPI.Apply(prim)
                 physx_collision.CreateContactOffsetAttr(0.002)
                 physx_collision.CreateRestOffsetAttr(0.001)
+                mesh_col = UsdPhysics.MeshCollisionAPI.Apply(prim)
+                mesh_col.CreateApproximationAttr("convexDecomposition")
 
-    # ===== Contact/Rest offset + CCD for workspace objects (ball etc.) =====
+    # ===== Contact/Rest offset + convexDecomposition + CCD for workspace objects =====
+    # SDF는 dynamic body에 적용 불가 — convexDecomposition으로 형상 정확도 향상
     workspace_prim = stage.GetPrimAtPath("/Workspace")
     if workspace_prim.IsValid():
         for prim in Usd.PrimRange(workspace_prim):
@@ -279,6 +295,8 @@ def main():
                 physx_collision = PhysxSchema.PhysxCollisionAPI.Apply(prim)
                 physx_collision.CreateContactOffsetAttr(0.002)
                 physx_collision.CreateRestOffsetAttr(0.001)
+                mesh_col = UsdPhysics.MeshCollisionAPI.Apply(prim)
+                mesh_col.CreateApproximationAttr("convexDecomposition")
             if prim.HasAPI(UsdPhysics.RigidBodyAPI):
                 PhysxSchema.PhysxRigidBodyAPI.Apply(prim).CreateEnableCCDAttr(True)
 
@@ -468,8 +486,8 @@ def main():
         "pinch_open_other_close": np.array(RIGHT_HAND_PINCH_OPEN_OTHER_CLOSE, dtype=np.float64),
     }
 
-    left_smoother = CtrlSmoother(alpha=0.5, max_speed=3.0)
-    right_smoother = CtrlSmoother(alpha=0.5, max_speed=3.0)
+    left_smoother = CtrlSmoother(alpha=0.9, max_speed=10.0)
+    right_smoother = CtrlSmoother(alpha=0.9, max_speed=10.0)
     left_grip_tracker = GripStateTracker()
     right_grip_tracker = GripStateTracker()
 
@@ -486,6 +504,7 @@ def main():
     # =================================================================
     # Stereo video streamer setup (Isaac Sim stereo camera -> PICO VR)
     # =================================================================
+
     streamer = None
     stereo_capture = None
     if args.pico_stream_port > 0:
@@ -655,6 +674,7 @@ def main():
             world.step(render=True)
 
             # --- Stereo Video Stream: capture SBS frame and send ---
+
             if streamer and stereo_capture:
                 try:
                     sbs_frame = stereo_capture.get_sbs_frame()

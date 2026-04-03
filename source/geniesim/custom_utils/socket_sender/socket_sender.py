@@ -212,3 +212,39 @@ class DramaSocketSender:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.disconnect()
         return False
+
+
+class UdpSocketSender:
+    """UDP sender for robot joint states.
+
+    Sends a 20-float array as raw binary (little-endian):
+        [left_arm x7] + [left_gripper x3] + [right_arm x7] + [right_gripper x3]
+    """
+
+    def __init__(self, host: str = "127.0.0.1", port: int = 5005):
+        self.host = host
+        self.port = port
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._addr = (host, port)
+
+    def send(
+        self,
+        left_arm,
+        left_gripper,
+        right_arm,
+        right_gripper,
+    ):
+
+        data = list(left_arm) + list(left_gripper) + list(right_arm) + list(right_gripper)
+        packet = struct.pack("<20f", *data)
+        self._sock.sendto(packet, self._addr)
+
+    def close(self):
+        self._sock.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False

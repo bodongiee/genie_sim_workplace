@@ -53,6 +53,7 @@ class DualArmIsaacTeleopController:
         hold_joint_positions: Dict[str, float] = None,
         camera_config: Optional[Dict] = None,
         input_mode: str = "controller",
+        ik_solver_kwargs: Dict = None,
     ):
         self = cls()
         self.world = world
@@ -101,7 +102,7 @@ class DualArmIsaacTeleopController:
 
         # ===== 2. IK Solver module =====
         left_q0, right_q0 = self._read_arm_joints()
-        self.ik_solver = DualArmIKSolver(ik_urdf_path, ik_config_path, left_q0, right_q0)
+        self.ik_solver = DualArmIKSolver(ik_urdf_path, ik_config_path, left_q0, right_q0, **(ik_solver_kwargs or {}))
 
         # ===== Camera setup =====
         if camera_config is not None:

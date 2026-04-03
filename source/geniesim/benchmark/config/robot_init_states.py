@@ -84,6 +84,10 @@ FFW_SH5_DEFAULT_STATES = {
     "body_state": [-0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
 }
 
+AMBER_BIMANUAL_DEFAULT_STATES = {
+    "init_arm" : [30, 45, 0, 90, -30, -30 ,0,
+                  -30, 45, 0, 90, 30, -30 ,0],
+}
 
 
 G1_DEFAULT_STATES = {

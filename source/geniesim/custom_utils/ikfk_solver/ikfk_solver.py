@@ -54,6 +54,7 @@ class DualArmIKSolver:
         cfg_map = {
             "ffw_sg2_follower": ("ffw_sg2_follower.urdf", "ffw_sg2_follower_solver.yaml"),
             "ffw_sh5_follower": ("ffw_sh5_follower.urdf", "ffw_sh5_follower_solver.yaml"),
+            "amber_bimanual" : ("amber_bimanual.urdf", "amber_bimanual_solver.yaml"),
             "G2": ("G2_NO_GRIPPER.urdf", "g2_solver.yaml"),
             "G1": ("G1_NO_GRIPPER.urdf", "g1_solver.yaml"),
         }

@@ -86,7 +86,13 @@ class DexHandTracker:
 
         if config_dict is not None:
             RetargetingConfig.set_default_urdf_dir(str(Path(urdf_path).parent))
-            self.retargeting = RetargetingConfig.from_dict(config_dict).build()
+            # Filter config to only the fields this version of RetargetingConfig supports.
+            # This lets the same config dict work across retargeting_config.py versions
+            # that may not yet have newer fields (eta1, eta2, wrist_tip_weight, etc.).
+            import dataclasses
+            supported_keys = {f.name for f in dataclasses.fields(RetargetingConfig)}
+            filtered_cfg = {k: v for k, v in config_dict.items() if k in supported_keys}
+            self.retargeting = RetargetingConfig.from_dict(filtered_cfg).build()
         else:
             raise ValueError("config_dict is required for HX5 DexHandTracker")
 
@@ -102,6 +108,10 @@ class DexHandTracker:
         if self.retargeting_type == RetargetingType.position:
             ref_value = transformed_pos[indices, :]
         elif self.retargeting_type == RetargetingType.vector:
+            origin_indices = indices[0, :]
+            task_indices = indices[1, :]
+            ref_value = transformed_pos[task_indices, :] - transformed_pos[origin_indices, :]
+        elif self.retargeting_type == RetargetingType.dexpilot:
             origin_indices = indices[0, :]
             task_indices = indices[1, :]
             ref_value = transformed_pos[task_indices, :] - transformed_pos[origin_indices, :]
@@ -177,6 +187,55 @@ HX5_LEFT_RETARGETING_CONFIG = {
     ],
     "scaling_factor": 1.4,
     "low_pass_alpha": 0.4,
+}
+
+
+# =============================================================================
+# HX5-D20 DexPilot retargeting config
+# Uses fingertip positions directly — better pinch convergence than vector.
+# Parameters tuned to fix thumb CMC opposition and pinch misalignment.
+# =============================================================================
+HX5_RIGHT_DEXPILOT_CONFIG = {
+    "type": "dexpilot",
+    "urdf_path": "hx5_d20_right.urdf",
+    "wrist_link_name": "hx5_d20_right_base",
+    "finger_tip_link_names": [
+        "finger_end_r_link1",  # thumb
+        "finger_end_r_link2",  # index
+        "finger_end_r_link3",  # middle
+        "finger_end_r_link4",  # ring
+        "finger_end_r_link5",  # pinky
+    ],
+    "scaling_factor": 1.6,
+    # Pinch mode activates when fingertip distance < project_dist
+    "project_dist": 0.09,
+    "escape_dist": 0.12,
+    # eta1=0.0: zero-length reference in pinch mode → no direction ambiguity
+    "eta1": 0.0,
+    "eta2": 0.02,
+    # Lower wrist-to-tip weight → pinch constraint dominates over extension bias
+    "wrist_tip_weight": 3.0,
+    "low_pass_alpha": 0.2,
+}
+
+HX5_LEFT_DEXPILOT_CONFIG = {
+    "type": "dexpilot",
+    "urdf_path": "hx5_d20_left.urdf",
+    "wrist_link_name": "hx5_d20_left_base",
+    "finger_tip_link_names": [
+        "finger_end_l_link1",  # thumb
+        "finger_end_l_link2",  # index
+        "finger_end_l_link3",  # middle
+        "finger_end_l_link4",  # ring
+        "finger_end_l_link5",  # pinky
+    ],
+    "scaling_factor": 1.6,
+    "project_dist": 0.09,
+    "escape_dist": 0.12,
+    "eta1": 0.0,
+    "eta2": 0.02,
+    "wrist_tip_weight": 3.0,
+    "low_pass_alpha": 0.2,
 }
 
 

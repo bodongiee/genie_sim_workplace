@@ -1,0 +1,86 @@
+{
+    "camera": {
+        "/amber_bimanual/camera_link/head_camera": [
+            2208,
+            1242,
+            30
+        ]
+    },
+    "closed_positions": {
+        "left": [
+            1,
+            1
+        ],
+        "right": [
+            1,
+            1
+        ]
+    },
+    "gripper": {
+        "closed_velocities": {
+            "left": [
+                -1.0,
+                -1.0
+            ],
+            "right": [
+                -1.0,
+                -1.0
+            ]
+        },
+        "end_effector_name": {
+            "left": "left_Hand_Dummmy_Link",
+            "right": "right_Hand_Dummy_Link"
+        },
+        "end_effector_prim_path": {
+            "left": "/amber_bimanual/left_Hand_Dummmy_Link",
+            "right": "/amber_bimanual/right_Hand_Dummy_Link"
+        },
+        "finger_names": {
+            "left": [
+                "left_Top_1",
+                "left_Mid_1",
+                "left_Top_2",
+                "left_Mid_2",
+                "left_Top_3",
+                "left_Mid_3"
+            ],
+            "right": [
+                "right_Top_1",
+                "right_Mid_1",
+                "right_Top_2",
+                "right_Mid_2",
+                "right_Top_3",
+                "right_Mid_3"
+            ]
+        },
+        "gripper_control_joint": {
+            "left": "/amber_bimanual/joints/left_Dummy_Mid_1",
+            "right": "/amber_bimanual/right_Hand_Dummy_Mid_1"
+        },
+        "gripper_type": "angular",
+        "max_force": -1,
+        "opened_positions": {
+            "left": [
+                0.1,
+                0.1,
+                0.1
+            ],
+            "right": [
+                0.1,
+                0.1,
+                0.1
+            ]
+        }
+    },
+    "robot": {
+        "arm": "right",
+        "base_prim_path": "/amber_bimanual",
+        "dof_nums": 7,
+        "init_joint_position": [],
+        "initial_position": [],
+        "joint_delta_time": 0.01,
+        "lock_joints": [],
+        "robot_name": "amber_bimanual",
+        "robot_usd": "robot/amber/amber_bimanual.usda"
+    }
+}

@@ -89,8 +89,8 @@ class HandGripper(Gripper):
 
         self.physics_material = PhysicsMaterial(
             prim_path="/World/hand_gripper_physics",
-            static_friction=1,
-            dynamic_friction=1,
+            static_friction=2,
+            dynamic_friction=2,
             restitution=0.1,
         )
         self.object_material = PhysicsMaterial(

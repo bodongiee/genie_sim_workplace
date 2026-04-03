@@ -49,19 +49,12 @@ class KeyboardMonitor:
 
         state = self._state
 
-        ARROW_KEYS = {
-            carb.input.KeyboardInput.UP,
-            carb.input.KeyboardInput.DOWN,
-            carb.input.KeyboardInput.LEFT,
-            carb.input.KeyboardInput.RIGHT,
-        }
-
         def _on_kb_event(event, *args, **kwargs):
             if event.type == carb.input.KeyboardEventType.KEY_PRESS:
-                if event.input in ARROW_KEYS:
+                if event.input == carb.input.KeyboardInput.A:
                     state["left"] = not state["left"]
                     print(f"[Keyboard] Left hand {'ON' if state['left'] else 'OFF'}")
-                elif event.input == carb.input.KeyboardInput.NUMPAD_0:
+                elif event.input == carb.input.KeyboardInput.S:
                     state["right"] = not state["right"]
                     print(f"[Keyboard] Right hand {'ON' if state['right'] else 'OFF'}")
             return True
@@ -349,9 +342,6 @@ class TeleopInput:
     # =========================================================================
     # Keyboard mode
     # =========================================================================
-    # Left hand activates while SPACE is held.
-    # Right hand activates while any ARROW key is held.
-    # Pose source is still hand tracking (wrist), but activation is keyboard-gated.
     def _arm_inputs_keyboard(self, ee_poses, smooth_qs, T_base_world):
         self._keyboard.poll()
 

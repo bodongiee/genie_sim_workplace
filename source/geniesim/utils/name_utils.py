@@ -327,6 +327,27 @@ FFW_SH5_RIGHT_HAND_JOINT_NAMES = [
 FFW_SH5_JOINT_NAMES = FFW_SH5_DUAL_ARM_JOINT_NAMES + FFW_SH5_HEAD_JOINT_NAMES
 FFW_SH5_HAND_JOINT_NAMES = FFW_SH5_LEFT_HAND_JOINT_NAMES + FFW_SH5_RIGHT_HAND_JOINT_NAMES
 
+AMBER_BIMANUAL_LEFT_ARM_JOINT_NAMES = [
+    "left_Rev1",
+    "left_Rev2",
+    "left_Rev3",
+    "left_Rev4",
+    "left_Rev5",
+    "left_Rev6",
+    "left_Rev7",
+]
+
+AMBER_BIMANUAL_RIGHT_ARM_JOINT_NAMES = [
+    "right_Rev1",
+    "right_Rev2",
+    "right_Rev3",
+    "right_Rev4",
+    "right_Rev5",
+    "right_Rev6",
+    "right_Rev7",
+]
+
+AMBER_BIMANUAL_ARM_JOINT_NAMES = AMBER_BIMANUAL_LEFT_ARM_JOINT_NAMES + AMBER_BIMANUAL_RIGHT_ARM_JOINT_NAMES
 
 def robot_type_mapping(robot_type):
     if "G1_omnipicker" in robot_type:

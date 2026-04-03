@@ -16,7 +16,7 @@ parser.add_argument("--headless", action="store_true", default=False)
 parser.add_argument("--robot-usd", type=str, default=None)
 parser.add_argument("--scale-factor", type=float, default=1)
 parser.add_argument("--physics-dt", type=float, default=1.0 / 120.0)
-parser.add_argument("--rendering-dt", type=float, default=1.0 / 60.0)
+parser.add_argument("--rendering-dt", type=float, default=1.0 / 90.0)
 parser.add_argument("--input-mode", type=str, default="hand_tracking", choices=["controller", "hand_tracking", "keyboard"], help="Input mode: 'controller' for VR controller, 'hand_tracking' for VR hand wrist, 'keyboard' for keyboard-toggled hand tracking")
 parser.add_argument("--pico-ip", type=str, default="192.168.50.217", help="PICO VR IP address for video streaming")
 parser.add_argument("--pico-stream-port", type=int, default=12345, help="PICO VR streaming port (0=disable)")
@@ -135,6 +135,8 @@ def main():
         DexHandTracker,
         HX5_RIGHT_RETARGETING_CONFIG,
         HX5_LEFT_RETARGETING_CONFIG,
+        HX5_RIGHT_DEXPILOT_CONFIG,
+        HX5_LEFT_DEXPILOT_CONFIG,
         HX5_RIGHT_ACTUATOR_RANGE,
         HX5_LEFT_ACTUATOR_RANGE,
         CtrlSmoother,
@@ -194,7 +196,7 @@ def main():
 
     # Load sub_task scene (table + colored cubes)
     BENCHMARK_CFG_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "../../benchmark/config"))
-    sub_task_usd = os.path.join(BENCHMARK_CFG_DIR, "llm_task", "clean_the_desktop", "0", "scene.usda")
+    sub_task_usd = os.path.join(BENCHMARK_CFG_DIR, "llm_task", "pick_specific_object", "0", "scene.usda")
     add_reference_to_stage(usd_path=sub_task_usd, prim_path="/Workspace")
     print(f"Loaded sub_task scene: {sub_task_usd}")
 
@@ -469,14 +471,14 @@ def main():
     right_dex_tracker = DexHandTracker(
         urdf_path=right_urdf_path,
         hand_type=HandType.right,
-        retargeting_type=RetargetingType.vector,
-        config_dict=HX5_RIGHT_RETARGETING_CONFIG,
+        retargeting_type=RetargetingType.dexpilot,
+        config_dict=HX5_RIGHT_DEXPILOT_CONFIG,
     )
     left_dex_tracker = DexHandTracker(
         urdf_path=left_urdf_path,
         hand_type=HandType.left,
-        retargeting_type=RetargetingType.vector,
-        config_dict=HX5_LEFT_RETARGETING_CONFIG,
+        retargeting_type=RetargetingType.dexpilot,
+        config_dict=HX5_LEFT_DEXPILOT_CONFIG,
     )
     print("DexHandTrackers initialized (L & R).")
 
@@ -492,6 +494,21 @@ def main():
     # Ctrl smoothers
     left_smoother = CtrlSmoother(alpha=args.smooth_alpha, max_speed=args.smooth_max_speed)
     right_smoother = CtrlSmoother(alpha=args.smooth_alpha, max_speed=args.smooth_max_speed)
+
+    # Pinch joint2 override: rate-limited drive of thumb CMC joint during pinch
+    _PINCH_J2_NAME  = {"right": "finger_r_joint2", "left": "finger_l_joint2"}
+    _PINCH_J2_VAL   = {"right": -1.55, "left": 1.55}  # target angle (rad); left mirrors right
+    _PINCH_THRESH   = 0.09   # metres — same as project_dist in yml
+    _J2_SPEED       = 4.0   # rad/s — max transition speed
+    _j2_idx         = {}
+    _j2_commanded   = {}
+    _j2_prev_time   = {}
+    for _side, _tracker in [("right", right_dex_tracker), ("left", left_dex_tracker)]:
+        _jname = _PINCH_J2_NAME[_side]
+        _jnames = list(_tracker.retargeting.joint_names)
+        _j2_idx[_side] = _jnames.index(_jname) if _jname in _jnames else None
+        _j2_commanded[_side] = 0.0
+        _j2_prev_time[_side] = time.time()
 
     # =================================================================
     # Stereo video streamer setup (Isaac Sim stereo camera -> PICO VR)
@@ -643,24 +660,36 @@ def main():
 
                 hand_state = np.array(hand_state)
 
-                # ===== Step 1: VR → MediaPipe keypoints → filter → adaptive scale =====
+                # ===== Step 1: VR → MediaPipe keypoints (SAPIEN-equivalent: no filter, no adaptive scale) =====
                 kp = pico_hand_state_to_mediapipe(hand_state)
-                kp_filtered = hand_filter.filter(kp)
-                kp_scaled = adaptive_scale_keypoints(
-                    kp_filtered, args.scale_open, args.scale_close, args.open_length)
 
                 # ===== Step 2: DexRetargeting IK → pin_q =====
-                pin_q = dex_tracker.retarget(kp_scaled)
+                pin_q = dex_tracker.retarget(kp)
                 if pin_q is None:
                     continue
+
+                # ===== Step 2b: Rate-limited joint2 pinch override =====
+                if _j2_idx[hand_side] is not None:
+                    _now = time.time()
+                    _dt = _now - _j2_prev_time[hand_side]
+                    _j2_prev_time[hand_side] = _now
+                    _thumb_tip = kp[4]
+                    _pinching = any(
+                        np.linalg.norm(_thumb_tip - kp[tip_idx]) < _PINCH_THRESH
+                        for tip_idx in [8, 12, 16, 20]
+                    )
+                    _j2_target = _PINCH_J2_VAL[hand_side] if _pinching else pin_q[_j2_idx[hand_side]]
+                    _max_delta = _J2_SPEED * _dt
+                    _j2_commanded[hand_side] += np.clip(
+                        _j2_target - _j2_commanded[hand_side], -_max_delta, _max_delta
+                    )
+                    pin_q[_j2_idx[hand_side]] = _j2_commanded[hand_side]
+                    dex_tracker.retargeting.set_qpos(pin_q)
 
                 # ===== Step 3: pin_q → Isaac Sim joint targets =====
                 target = pin_q_to_isaac_hand_targets(pin_model, pin_q, hand_joint_names)
 
-                # ===== Step 4: Velocity smoothing =====
-                target = smoother.apply(target)
-
-                # ===== Step 5: Clamp to actuator range =====
+                # ===== Step 4: Clamp to actuator range =====
                 act_names = list(act_range.keys())
                 for i in range(len(target)):
                     if i < len(act_names):

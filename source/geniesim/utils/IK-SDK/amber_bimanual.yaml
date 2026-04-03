@@ -1,0 +1,82 @@
+limit_way: "urdf" # urdf or yaml
+
+# Optimizer general configuration
+optimizer:
+  initial_step: 1e-2
+  xtol_rel: 1.0e-7 # Relative x tolerance
+  ftol_rel: 1.0e-7 # Relative f tolerance
+  maxeval: 1000 # Maximum number of iterations
+  maxtime: 0.1 # Maximum solving time (seconds) 0.005
+  gradient_eps: 1e-8 # Finite difference step size for gradient calculation
+
+# Cost function configuration, divided into Cartesian space pose cost and joint space cost
+objectives:
+  # Cartesian space cost
+  cartesian_space:
+    # Multiple target poses can be set
+    - name: "end_effector" # End effector
+      position: { weight: 60.0, use_groove: true }
+      orientation: { weight: 6.0, use_groove: true }
+
+
+  # Joint space cost
+  joint_space:
+    # Weight coefficients for each joint; larger weights indicate less preference to move these joints
+    weights:
+      joint_1: 0.6 # Shoulder joint — high to discourage unnecessary shoulder movement
+      joint_2: 0.6 # Shoulder joint
+      joint_3: 0.6 # Shoulder joint
+      joint_4: 0.4 # Elbow joint
+      joint_5: 0.2 # Wrist joint
+      joint_6: 0.2 # Wrist joint
+      joint_7: 0.2 # Wrist joint
+    # Joint space objective functions
+    velocity: { weight: 200.0, use_groove: true }
+    acceleration: { weight: 100.0, use_groove: true }
+    jerk: { weight: 50.0, use_groove: true }
+    limits: { weight: 10.0, use_groove: true }
+
+active_joints:
+
+  left_arm:
+    - left_Rev1
+    - left_Rev2
+    - left_Rev3
+    - left_Rev4
+    - left_Rev5
+    - left_Rev6
+    - left_Rev7
+
+  right_arm:
+    - right_Rev1
+    - right_Rev2
+    - right_Rev3
+    - right_Rev4
+    - right_Rev5
+    - right_Rev6
+    - right_Rev7
+
+  reduced_left_arm:
+    - left_Rev1
+    - left_Rev2
+    - left_Rev3
+    - left_Rev4
+    - left_Rev5
+
+  reduced_right_arm: 
+    - right_Rev1
+    - right_Rev2
+    - right_Rev3
+    - right_Rev4
+    - right_Rev5
+
+target_links:
+
+  left_arm:
+    base: base_link
+    target:
+      - left_Hand_Dummy_Link
+  right_arm:
+    base: base_link
+    target:
+      - right_Hand_Dummy_Link

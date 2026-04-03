@@ -96,8 +96,10 @@ class IsaacStereoCapture:
         self._right_rp = rep.create.render_product(right_cam_path, resolution=eye_resolution)
 
 
-        self._left_annotator = rep.AnnotatorRegistry.get_annotator("rgb", device="cpu")
-        self._right_annotator = rep.AnnotatorRegistry.get_annotator("rgb", device="cpu")
+        self._left_annotator = rep.AnnotatorRegistry.get_annotator("rgb")
+        self._left_annotator.attach([self._left_rp])
+        self._right_annotator = rep.AnnotatorRegistry.get_annotator("rgb")
+        self._right_annotator.attach([self._right_rp])
 
         # Pre-allocate SBS output buffer
         self._sbs_buffer = np.zeros((self._eye_h, self._eye_w * 2, 4), dtype=np.uint8)
