@@ -15,6 +15,11 @@ zed-isaac-sim/
 XRoboToolkit-PC-Service-Pybind
 XRoboToolkit-PC-Service-Pybind/
 
+KAPEX
+*.usd
+*.usda
+*.usdc
+
 **/*/data/
 **/__pycache__
 *.pyc
