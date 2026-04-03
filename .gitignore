@@ -58,3 +58,4 @@ logs
 
 .cache/
 .cache
+source/geniesim/custom_teleop/xrobo/KAPEX.usdc
